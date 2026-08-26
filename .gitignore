@@ -1,0 +1,54 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Model Weights & Caches
+models/
+hf_cache/
+*.safetensors
+*.bin
+*.pt
+
+# Benchmark & Temp output
+benchmarks/results/
+*.prof
+*.pstats
+benchmark_*.json
+
+# IDEs & OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
