@@ -1,20 +1,34 @@
 """Main PagedServe Inference Engine orchestrating memory, scheduler, runner, and sampler."""
 
+import queue
 import uuid
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Iterator
 import torch
 
 from pagedserve.config import EngineConfig
 from pagedserve.engine.request import InferenceRequest, SamplingParams
 from pagedserve.engine.state import RequestState
 from pagedserve.memory.kv_cache import KVCacheManager
+from pagedserve.metrics import EngineMetrics
 from pagedserve.model.loader import ModelLoader, LoadedModel
 from pagedserve.model.runner import ModelRunner, ModelSequenceState
 from pagedserve.model.sampler import Sampler
 from pagedserve.scheduler.batch import WorkType, SchedulerBatch
 from pagedserve.scheduler.scheduler import Scheduler
 from pagedserve.errors import InvalidRequestError, PagedServeError
+
+
+@dataclass
+class StreamEvent:
+    """Single token streaming event emitted by the engine."""
+
+    request_id: str
+    token_id: int
+    text_delta: str
+    generated_tokens: int
+    finished: bool
+    finish_reason: Optional[str] = None
 
 
 @dataclass
@@ -31,21 +45,14 @@ class EngineStepOutput:
 
 
 class PagedServeEngine:
-    """The central orchestrator of the PagedServe LLM serving runtime.
-    
-    Coordinates:
-    - Request submission & tokenization
-    - KV Cache block management (KVCacheManager)
-    - Continuous batching scheduling (Scheduler)
-    - PyTorch model execution (ModelRunner)
-    - Token sampling (Sampler)
-    - Safe resource cleanup on completion, cancellation, or failure.
-    """
+    """The central orchestrator of the PagedServe LLM serving runtime."""
 
     def __init__(
         self,
         config: Optional[EngineConfig] = None,
         loaded_model: Optional[LoadedModel] = None,
+        scheduler: Optional[Scheduler] = None,
+        kv_cache_mgr: Optional[KVCacheManager] = None,
     ):
         self.config: EngineConfig = config if config is not None else EngineConfig()
 
@@ -63,20 +70,26 @@ class PagedServeEngine:
         self.device = self.loaded_model.device
 
         # 2. Initialize Memory Manager
-        self.kv_cache_mgr: KVCacheManager = KVCacheManager(
-            num_blocks=self.config.num_blocks,
-            block_size=self.config.block_size,
-            enable_prefix_caching=self.config.enable_prefix_caching,
-        )
+        if kv_cache_mgr is not None:
+            self.kv_cache_mgr: KVCacheManager = kv_cache_mgr
+        else:
+            self.kv_cache_mgr = KVCacheManager(
+                num_blocks=self.config.num_blocks,
+                block_size=self.config.block_size,
+                enable_prefix_caching=self.config.enable_prefix_caching,
+            )
 
         # 3. Initialize Continuous Batching Scheduler
-        self.scheduler: Scheduler = Scheduler(
-            kv_cache_mgr=self.kv_cache_mgr,
-            max_num_sequences=self.config.max_num_sequences,
-            max_batch_tokens=self.config.max_batch_tokens,
-            max_prefill_tokens=self.config.max_prefill_tokens_per_step,
-            prefill_chunk_size=self.config.max_prefill_tokens_per_step,
-        )
+        if scheduler is not None:
+            self.scheduler: Scheduler = scheduler
+        else:
+            self.scheduler = Scheduler(
+                kv_cache_mgr=self.kv_cache_mgr,
+                max_num_sequences=self.config.max_num_sequences,
+                max_batch_tokens=self.config.max_batch_tokens,
+                max_prefill_tokens=self.config.max_prefill_tokens_per_step,
+                prefill_chunk_size=self.config.max_prefill_tokens_per_step,
+            )
 
         # 4. Initialize Model Runner & Sampler
         self.runner: ModelRunner = ModelRunner(loaded_model=self.loaded_model)
@@ -86,10 +99,20 @@ class PagedServeEngine:
         self._requests: Dict[str, InferenceRequest] = {}
         self._model_states: Dict[str, ModelSequenceState] = {}
 
+        # 6. Streaming and Telemetry
+        self._stream_queues: Dict[str, queue.Queue] = {}
+        self.metrics: EngineMetrics = EngineMetrics()
+        self.metrics.kv_blocks_total = self.kv_cache_mgr.total_blocks
+
     @property
     def has_active_work(self) -> bool:
         """True if any requests are queued or currently executing."""
         return self.scheduler.num_waiting > 0 or self.scheduler.num_running > 0
+
+    @property
+    def has_unfinished_requests(self) -> bool:
+        """Alias for has_active_work for backward compatibility."""
+        return self.has_active_work
 
     def submit(
         self,
@@ -97,16 +120,7 @@ class PagedServeEngine:
         sampling_params: Optional[SamplingParams] = None,
         request_id: Optional[str] = None,
     ) -> str:
-        """Tokenize a prompt and enqueue an inference request for continuous scheduling.
-        
-        Args:
-            prompt: Text prompt string.
-            sampling_params: Sampling configuration (defaults to greedy/temp=1.0).
-            request_id: Optional user-supplied unique ID.
-            
-        Returns:
-            The request_id assigned to this request.
-        """
+        """Tokenize a prompt and enqueue an inference request for continuous scheduling."""
         if not prompt:
             raise InvalidRequestError("Prompt cannot be empty")
 
@@ -114,13 +128,10 @@ class PagedServeEngine:
         if req_id in self._requests:
             raise InvalidRequestError(f"Request ID '{req_id}' is already registered")
 
-        # Tokenize prompt
         prompt_token_ids = self.tokenizer.encode(prompt, add_special_tokens=False)
         if not prompt_token_ids:
-            # Fallback for whitespace or empty tokenization
             prompt_token_ids = [self.tokenizer.eos_token_id or 0]
 
-        # Configure sampling params with tokenizer's EOS token if not explicitly overridden
         params = sampling_params if sampling_params is not None else SamplingParams()
         if self.tokenizer.eos_token_id is not None:
             params.stop_token_ids.add(self.tokenizer.eos_token_id)
@@ -133,16 +144,19 @@ class PagedServeEngine:
         )
 
         self._requests[req_id] = req
+        self._stream_queues[req_id] = queue.Queue()
+        self.metrics.on_request_submitted(len(prompt_token_ids))
         self.scheduler.add_request(req)
         return req_id
 
     def cancel(self, request_id: str) -> bool:
         """Cancel an active or pending request and immediately reclaim all resources."""
-        # 1. Clean up scheduler and metadata KV blocks
         cancelled = self.scheduler.cancel_request(request_id)
-
-        # 2. Clean up actual PyTorch model KV state
         self._model_states.pop(request_id, None)
+
+        if cancelled:
+            self.metrics.on_request_cancelled()
+            self._close_stream_queue(request_id)
 
         return cancelled
 
@@ -157,14 +171,82 @@ class PagedServeEngine:
             return ""
         return self.tokenizer.decode(req.generated_token_ids, skip_special_tokens=True)
 
+    def _emit_stream_event(
+        self, request_id: str, token_id: int, text_delta: str, req: InferenceRequest
+    ) -> None:
+        """Queue a stream event for an output token."""
+        q = self._stream_queues.get(request_id)
+        if q is None:
+            return
+        event = StreamEvent(
+            request_id=request_id,
+            token_id=token_id,
+            text_delta=text_delta,
+            generated_tokens=req.num_generated_tokens,
+            finished=req.is_finished,
+            finish_reason=req.finish_reason if req.is_finished else None,
+        )
+        q.put(event)
+        if req.is_finished:
+            q.put(None)
+
+    def _close_stream_queue(self, request_id: str) -> None:
+        """Send sentinel to close stream queue."""
+        q = self._stream_queues.get(request_id)
+        if q is not None:
+            q.put(None)
+
+    def stream_events(self, request_id: str) -> Iterator[StreamEvent]:
+        """Yield StreamEvents as they are emitted during engine steps."""
+        q = self._stream_queues.get(request_id)
+        if q is None:
+            return
+        while True:
+            event = q.get()
+            if event is None:
+                break
+            yield event
+
+    def run_and_stream(self, request_id: str, max_steps: int = 1000) -> Iterator[StreamEvent]:
+        """Step engine iteratively and yield StreamEvents for request_id."""
+        req = self._requests.get(request_id)
+        if req is None:
+            raise KeyError(f"Unknown request ID '{request_id}'")
+
+        steps = 0
+        while steps < max_steps:
+            q = self._stream_queues.get(request_id)
+            if q is not None:
+                while not q.empty():
+                    event = q.get_nowait()
+                    if event is None:
+                        return
+                    yield event
+
+            if req.is_finished:
+                break
+
+            self.step()
+            steps += 1
+
+        # Drain any final events after last step
+        q = self._stream_queues.get(request_id)
+        if q is not None:
+            while not q.empty():
+                event = q.get_nowait()
+                if event is None:
+                    return
+                yield event
+
+    def update_metrics_snapshot(self) -> None:
+        """Update live telemetry state from scheduler and memory manager."""
+        self.metrics.requests_waiting = self.scheduler.num_waiting
+        self.metrics.requests_running = self.scheduler.num_running
+        self.metrics.kv_blocks_total = self.kv_cache_mgr.total_blocks
+        self.metrics.kv_blocks_used = self.kv_cache_mgr.used_blocks
+
     def step(self) -> EngineStepOutput:
-        """Execute a single engine iteration step.
-        
-        1. Queries Scheduler for the next batch of work (PREFILL and DECODE slices).
-        2. Executes prefill forward passes on prompt chunks; samples initial token when prompt completes.
-        3. Executes single-token decode forward passes on active decoding sequences; samples next tokens.
-        4. Updates sequence state machines and releases completed resources.
-        """
+        """Execute a single engine iteration step."""
         batch = self.scheduler.schedule()
         output = EngineStepOutput(batch=batch)
 
@@ -191,18 +273,20 @@ class PagedServeEngine:
                 self._model_states[item.request_id] = new_state
                 req.advance_prompt_tokens(item.num_tokens)
 
-                # If prompt is now fully ingested, transition to DECODING and sample the first token!
                 if req.is_prefill_complete:
                     req.mark_decoding()
                     first_token = self.sampler.sample(logits, req.sampling_params)
                     req.append_generated_token(first_token)
                     output.generated_tokens[item.request_id] = first_token
 
-                    # Record token in memory manager
                     self.kv_cache_mgr.append_token(req.request_id, req.total_tokens)
+
+                    text_delta = self.tokenizer.decode([first_token], skip_special_tokens=True)
+                    self._emit_stream_event(item.request_id, first_token, text_delta, req)
 
             except Exception as e:
                 self.scheduler.fail_request(item.request_id, str(e))
+                self.metrics.on_request_failed()
                 self._model_states.pop(item.request_id, None)
 
         # --- Phase 2: Execute DECODE items ---
@@ -213,7 +297,6 @@ class PagedServeEngine:
                 continue
 
             try:
-                # The input to decode is the latest generated token
                 last_token_id = req.generated_token_ids[-1]
 
                 logits, updated_state = self.runner.decode(
@@ -223,38 +306,44 @@ class PagedServeEngine:
                 )
                 self._model_states[item.request_id] = updated_state
 
-                # Sample next token
                 next_token = self.sampler.sample(logits, req.sampling_params)
                 req.append_generated_token(next_token)
                 output.generated_tokens[item.request_id] = next_token
 
-                # Record token expansion in memory manager
                 self.kv_cache_mgr.append_token(req.request_id, req.total_tokens)
+
+                text_delta = self.tokenizer.decode([next_token], skip_special_tokens=True)
+                self._emit_stream_event(item.request_id, next_token, text_delta, req)
 
             except Exception as e:
                 self.scheduler.fail_request(item.request_id, str(e))
+                self.metrics.on_request_failed()
                 self._model_states.pop(item.request_id, None)
 
         # --- Phase 3: Cleanup Terminal Model States ---
         self._cleanup_finished_states()
 
-        # Track any requests that finished in this step
-        for req_id, token_id in output.generated_tokens.items():
+        for req_id in output.generated_tokens.keys():
             req = self._requests.get(req_id)
             if req and req.is_finished:
                 output.finished_requests.append(req_id)
+                self.metrics.on_request_completed(
+                    req.num_generated_tokens, req.ttft, req.total_latency
+                )
 
         return output
 
     def _cleanup_finished_states(self) -> None:
         """Purge model KV activation states for finished, cancelled, or failed requests."""
         terminal_ids = [
-            req_id for req_id in self._model_states.keys()
+            req_id
+            for req_id in self._model_states.keys()
             if req_id not in self.scheduler.running_requests
             or self._requests[req_id].is_finished
         ]
         for req_id in terminal_ids:
             self._model_states.pop(req_id, None)
+            self._close_stream_queue(req_id)
 
     def run_until_complete(self, request_id: str, max_steps: int = 1000) -> InferenceRequest:
         """Convenience driver that repeatedly steps the engine until a request terminates."""
