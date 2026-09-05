@@ -32,6 +32,10 @@ The `PagedServeEngine` is the central orchestrator. It runs a loop that:
 
 ## Metadata KV Blocks vs Physical Transformer KV Tensors
 
-**CRITICAL NOTE**: PagedServe currently handles memory virtualization at the metadata layer. The `KVBlock`, `BlockTable`, and `KVCacheManager` structures perfectly simulate block-based continuous batching and memory management, tracking sequence lengths and capacities, and simulating prefix caching.
+### Architecture Evolution
+- **BEFORE (Phases 1–20)**: Metadata-only block paging + Hugging Face `DynamicCache`.
+- **CURRENT (Phases 21–28)**: Metadata paging + Real block-backed physical KV tensor pool (`TensorBlockStore`) + Reference scatter/gather & paged attention path (`PagedKVView` / `paged_attention_reference`).
 
-However, the actual physical tensors currently rely on Hugging Face's native `past_key_values` (specifically `DynamicCache`). We are NOT yet doing physical PagedAttention kernel integration where blocks map non-contiguously to pre-allocated PyTorch tensors via custom CUDA/Triton kernels. The memory virtualization at this stage proves the scheduler and metadata invariants, and lays the groundwork for the physical tensor integration in later milestones.
+> [!NOTE]
+> **Production Generation Path Notice**  
+> While PagedServe now possesses a fully verified physical tensor store, scatter/gather engine, and reference paged attention, the primary production continuous batching generation path (`ModelRunner`) currently continues to use Hugging Face's native `DynamicCache` for model forward passes. This maintains maximum compatibility while establishing exact numerical correctness for the physical block store before optimized physical CUDA/Triton kernels are introduced.

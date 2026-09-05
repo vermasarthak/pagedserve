@@ -69,6 +69,7 @@ python -m pagedserve.experiments.fragmentation --workload bimodal
 - [Architecture](docs/ARCHITECTURE.md)
 - [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
 - [KV Cache](docs/KV_CACHE.md)
+- [Physical KV Cache](docs/PHYSICAL_KV_CACHE.md)
 - [Scheduler](docs/SCHEDULER.md)
 - [Model Execution](docs/MODEL_EXECUTION.md)
 - [HTTP API](docs/API.md)

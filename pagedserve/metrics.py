@@ -67,7 +67,8 @@ class EngineMetrics:
         self.requests_waiting: int = 0
         self.requests_running: int = 0
         self.kv_blocks_total: int = 0
-        self.kv_blocks_used: int = 0
+        # Physical KV tensor store telemetry (set externally when physical store is enabled)
+        self.bytes_per_block: int = 0
 
     def on_request_submitted(self, prompt_tokens: int) -> None:
         self.requests_total += 1
@@ -98,6 +99,26 @@ class EngineMetrics:
 
     def on_prefix_cache_miss(self) -> None:
         self.prefix_cache_misses += 1
+
+    @property
+    def physical_kv_bytes_total(self) -> int:
+        """Total memory in bytes allocated for physical KV tensors."""
+        return self.kv_blocks_total * self.bytes_per_block
+
+    @property
+    def physical_kv_bytes_used(self) -> int:
+        """Memory in bytes currently used by allocated physical KV blocks."""
+        return self.kv_blocks_used * self.bytes_per_block
+
+    @property
+    def physical_kv_blocks_used(self) -> int:
+        """Number of physical KV blocks currently used."""
+        return self.kv_blocks_used
+
+    @property
+    def physical_kv_utilization(self) -> float:
+        """Physical KV tensor utilization ratio in [0.0, 1.0]."""
+        return self.kv_utilization
 
     @property
     def kv_blocks_free(self) -> int:
@@ -148,6 +169,8 @@ class EngineMetrics:
                 "used_blocks": self.kv_blocks_used,
                 "free_blocks": self.kv_blocks_free,
                 "utilization": round(self.kv_utilization, 4),
+                "physical_bytes_total": self.physical_kv_bytes_total,
+                "physical_bytes_used": self.physical_kv_bytes_used,
             },
             "prefix_cache": {
                 "hits": self.prefix_cache_hits,
