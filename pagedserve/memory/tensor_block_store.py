@@ -199,3 +199,14 @@ class TensorBlockStore:
         k = self._k_store[layer_idx, physical_block_id, :n]
         v = self._v_store[layer_idx, physical_block_id, :n]
         return k, v
+
+    def get_key_block(self, physical_block_id: int, layer_idx: int) -> torch.Tensor:
+        """Direct slice accessor for physical Key block tensor [block_size, num_kv_heads, head_dim]."""
+        self._validate_indices(layer_idx, physical_block_id)
+        return self._k_store[layer_idx, physical_block_id]
+
+    def get_value_block(self, physical_block_id: int, layer_idx: int) -> torch.Tensor:
+        """Direct slice accessor for physical Value block tensor [block_size, num_kv_heads, head_dim]."""
+        self._validate_indices(layer_idx, physical_block_id)
+        return self._v_store[layer_idx, physical_block_id]
+

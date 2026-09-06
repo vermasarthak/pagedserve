@@ -71,19 +71,13 @@ Provides a request-level view bundling `BlockTable`, `seq_length`, and `TensorBl
 
 ---
 
-## 5. Reference Paged Attention (`paged_attention_reference`)
-
-Consumes `PagedKVView` to execute causal multi-head or grouped-query attention math:
-
-$$S = \frac{Q K^T}{\sqrt{d_k}} + M_{\text{causal}}, \quad P = \text{softmax}(S), \quad O = P V$$
-
-> [!WARNING]
-> **Reference Implementation Notice**  
-> `paged_attention_reference` gathers non-contiguous physical blocks into temporary contiguous sequence tensors before computing matrix multiplications. It is an exact correctness reference implementation and does not perform zero-copy paged attention.
-
 ---
 
-## 6. Physical Prefix Sharing & Copy-on-Write Safety
+## 7. Direct Blockwise Paged Attention (`paged_attention_blockwise`)
 
-- **Physical Block Sharing**: Identical prompt prefix blocks registered in `PrefixCache` share the same physical block ID in `TensorBlockStore`. Reference counts (`ref_count`) track multi-request ownership.
-- **Copy-on-Write Protection**: Shared prefix blocks (`ref_count > 1`) are treated as immutable. Auto-regressive decode steps appending new tokens allocate separate private physical blocks, preserving shared prefix activations.
+PagedServe supports both gather-based reference attention and direct blockwise paged attention:
+- `paged_attention_reference`: Gathers non-contiguous physical blocks into a full contiguous tensor $O(S \cdot H \cdot D)$ before attention.
+- `paged_attention_blockwise`: Iterates directly over physical blocks in logical sequence using online softmax, maintaining $O(\text{block\_size} \cdot H \cdot D)$ temporary memory overhead per block.
+
+See [BLOCKWISE_ATTENTION.md](file:///Users/sarthak/.gemini/antigravity/scratch/pagedserve/docs/BLOCKWISE_ATTENTION.md) for full mathematical formulation and benchmark comparisons.
+
