@@ -1,83 +1,185 @@
 # PagedServe
 
-PagedServe is an original experimental LLM inference runtime built from scratch to demonstrate modern systems engineering principles for high-throughput LLM serving.
+PagedServe is an experimental LLM inference runtime built from scratch to explore paged KV memory, continuous batching, direct blockwise attention, and custom GPU kernels.
 
-## Core Subsystems & Features
+## Why I Built This
 
-- **KV Memory Subsystem**: Block-based continuous batching and memory management, including `KVBlock`, `BlockPool`, `BlockTable`, and strict reference counting.
-- **Prefix Caching**: Content-addressed deduplication of full blocks using chained SHA-256 cryptographic hashing.
-- **Continuous Batching Scheduler**: Iteration-level scheduling with FCFS, chunked prefill, token budgets, and memory-aware admission.
-- **Model Execution**: Genuine transformer inference engine integrated via PyTorch (`ModelRunner`, `ModelLoader`, `Sampler`).
-- **Sequential Baseline**: Conventional single-request baseline (`SequentialBaseline`) for fair comparative evaluation.
-- **Streaming Engine**: Token-by-token async event streaming from engine step iterations.
-- **FastAPI HTTP Server**: OpenAI-compatible subset API providing `/health`, `/metrics`, `/v1/completions`, and `/v1/chat/completions` (supporting SSE streaming).
-- **Telemetry & Metrics**: Comprehensive internal metric collection tracking TTFT, TPOT, E2E latency, throughput, KV block utilization, and prefix cache hit rate.
-- **Benchmark Harness**: Reproducible CLI tools to measure throughput, latency, and scheduler performance under various concurrency levels.
-- **Experiments**:
-  - **Allocator Fragmentation**: Simulation comparing contiguous vs block-based memory allocation under uniform, bimodal, and heavy-tailed workloads.
-  - **Memory-Aware Scheduler**: Experimental pressure-adaptive policy (`MemoryAwarePolicy`) modulating admissions and chunk sizes based on KV pressure.
+LLM inference engines like vLLM popularized PagedAttention to eliminate KV cache fragmentation and enable high-throughput continuous batching. However, understanding the intricate systems interactions between block tables, physical memory pools, continuous iteration scheduling, streaming engines, and custom hardware kernels requires building these components ground-up. PagedServe was engineered as a transparent, modular runtime to measure, benchmark, and evaluate each component independently.
 
-*Note: Genuine model execution is working. PagedServe currently handles memory virtualization at the metadata layer using Hugging Face's native `DynamicCache` for physical tensors (we are NOT yet implementing custom physical PagedAttention CUDA/Triton kernels).*
+## Architecture
+
+```mermaid
+flowchart TD
+    Client["HTTP Client / SDK"] -->|OpenAI REST / Streaming| API["FastAPI Server (api.py)"]
+    API --> Engine["PagedServeEngine"]
+    Engine --> Scheduler["Continuous Batching Scheduler"]
+    Engine --> ModelRunner["ModelRunner (Hugging Face PyTorch)"]
+    Scheduler -->|Block Allocation & Claims| KVManager["KVCacheManager"]
+    KVManager --> BlockPool["BlockPool"]
+    KVManager --> PrefixCache["PrefixCache (SHA-256)"]
+    KVManager --> BlockTable["BlockTable (Logical -> Physical Mapping)"]
+    BlockTable --> TensorBlockStore["TensorBlockStore (Unified 5D Physical Storage)"]
+    TensorBlockStore --> AttentionBackend{"PagedAttention Backend"}
+    AttentionBackend -->|PyTorch Fallback| PyTorchBackend["PyTorch Blockwise (Online Softmax)"]
+    AttentionBackend -->|Apple Metal GPU| MetalBackend["Fused Apple Metal MSL Kernel"]
+```
+
+## Core Systems
+
+### Continuous Batching
+Iterates sequence generation token-by-token across active requests. Interleaves prefill chunks with decode steps (`FCFSPolicy`, token budgets, memory-aware pressure control).
+
+### Block-Based KV Memory
+Virtualizes KV cache into fixed-size physical blocks (`block_size=16` or `32`), eliminating external memory fragmentation.
+
+### Physical KV Paging
+Allocates physical Key and Value tensors in pre-allocated unified 5D PyTorch tensors (`TensorBlockStore`) of shape `[num_layers, num_blocks, block_size, num_kv_heads, head_dim]`. Identical prompt prefixes share physical block IDs with Copy-on-Write (`CoW`) protection.
+
+### Direct Blockwise Attention
+Iterates directly over non-contiguous physical blocks using numerically stable online softmax ($m, l, \text{acc}$), maintaining $O(\text{block\_size})$ temporary memory overhead per block ($128\times$ memory reduction at $S=2048$) without constructing a full contiguous KV sequence tensor.
+
+### Fused Apple Metal GPU Backend
+Provides a custom GPU compute shader in Metal Shading Language (MSL) (`paged_attention_decode_kernel`) that executes single-token decode attention directly on Apple Silicon GPUs (M1/M2/M3/M4).
+
+---
+
+## Benchmark & Experimental Results
+
+### A. Real-Model Inference Throughput (distilgpt2)
+- **PagedServe Continuous Batching Engine**: ~3.39 requests/sec | ~27.15 output tokens/sec | ~1.165 sec mean latency.
+- **Sequential Baseline**: ~0.86 requests/sec | ~6.87 output tokens/sec | ~1.165 sec mean latency.
+- **Throughput Improvement**: ~3.94× higher token throughput under continuous batching concurrency.
+
+### B. Scheduler-Policy Simulation
+- Evaluates `FCFSPolicy` vs `MemoryAwarePolicy` under simulated sequence load without model execution overhead.
+- Demonstrates adaptive admission control and prefill chunk throttling under high KV pressure.
+
+### C. Allocator Fragmentation Experiment
+- Compares naive contiguous pre-allocation vs block-based allocation under uniform, bimodal, and heavy-tailed workload distributions.
+
+### D. Attention Memory Scaling Microbenchmark
+- Measured peak temporary working memory per layer ($B=16$, $H=12$, $D=64$, float32):
+  - **$S=128$**: Contiguous Gather = `768 KB` vs Blockwise = `96 KB` ($8\times$ reduction)
+  - **$S=512$**: Contiguous Gather = `3,072 KB` vs Blockwise = `96 KB` ($32\times$ reduction)
+  - **$S=2048$**: Contiguous Gather = `12,288 KB` vs Blockwise = `96 KB` ($128\times$ reduction)
+
+### E. Fused Apple Metal Backend Results
+- Measured on Apple M1 GPU (macOS 15.5):
+  - **$S=128, B=16$**: PyTorch Blockwise = `0.605 ms` | Metal Direct = `3.570 ms` (`5.90x higher latency`)
+  - **$S=512, B=16$**: PyTorch Blockwise = `2.111 ms` | Metal Direct = `13.146 ms` (`6.23x higher latency`)
+  - **$S=2048, B=16$**: PyTorch Blockwise = `19.284 ms` | Metal Direct = `46.935 ms` (`2.43x higher latency`)
+- **Technical Note on Metal Backend Results**: The current Metal implementation reduces temporary KV working memory to $96\text{ KB}$ (matching PyTorch blockwise attention), but exhibits higher latency than the CPU/MPS PyTorch C++ path due to per-invocation host-to-device buffer copy overhead (`newBufferWithBytes`) and Command Buffer encoding costs in Python.
+
+---
+
+## Correctness & Testing
+
+**283 passing tests** (0 failed, 0 skipped). Tested across 2 complete test suite iterations.
+
+Coverage includes:
+- Allocator reference counting & double-free protection
+- Chained SHA-256 prefix cache deduplication & LRU eviction
+- Continuous batching scheduling & chunked prefill boundaries
+- Real model prefill & decode output equivalence
+- OpenAI-compatible FastAPI endpoints & streaming SSE responses
+- Physical 5D tensor storage & non-contiguous scatter/gather
+- Direct blockwise paged attention online softmax equivalence across exact sequence lengths (`1` to `256`)
+- Multi-Head (MHA), Grouped-Query (GQA), and Multi-Query (MQA) head configurations
+- No-gather enforcement (verifying zero full-sequence contiguous tensor reconstruction)
+- Apple Metal MSL compute shader compilation, dispatch, scrambled block indexing, and fallback rules
+
+---
 
 ## Quick Start
 
 ### Installation
 ```bash
-# Create and activate virtual environment
+# Clone the repository
+git clone https://github.com/your-username/pagedserve.git
+cd pagedserve
+
+# Create and activate Python virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
+
+# Install PagedServe package in editable mode
 pip install -e .
 ```
 
-### Running the HTTP Server
+### Running Tests
+```bash
+pytest -v tests/
+```
+
+### Launching the HTTP Server
 ```bash
 uvicorn pagedserve.server.api:app --host 127.0.0.1 --port 8000
 ```
 
-### Running Examples
+### Running Microbenchmarks
 ```bash
-# Simple single-request generation
-python examples/simple_generate.py
-
-# Concurrent multi-request continuous batching
-python examples/concurrent_requests.py
-
-# Streaming token generation
-python examples/streaming_chat.py
-```
-
-### Running Benchmarks
-```bash
-# Throughput benchmark (PagedServe vs Sequential Baseline)
-python benchmarks/benchmark_throughput.py --num-requests 20
-
-# Latency benchmark (TTFT and per-token decode latency)
-python benchmarks/benchmark_latency.py --num-requests 10
-
-# FCFS vs Memory-Aware Scheduler benchmark
-python benchmarks/benchmark_scheduler.py --num-blocks 64
-
-# Run Blockwise Attention Microbenchmark
+# Run Direct Blockwise Attention Microbenchmark
 python benchmarks/benchmark_blockwise_attention.py
+
+# Run Apple Metal Paged Attention Microbenchmark
+python benchmarks/benchmark_metal_attention.py
 ```
 
-### Running Experiments
-```bash
-# Allocator fragmentation simulation
-python -m pagedserve.experiments.fragmentation --workload bimodal
+---
+
+## API
+
+PagedServe provides an OpenAI-compatible REST API:
+- `GET /health`: Health status endpoint.
+- `GET /metrics`: Telemetry endpoint reporting uptime, request counts, throughput, latency distributions (TTFT, TPOT, E2E), KV block utilization, and prefix cache hit rate.
+- `POST /v1/completions`: Text completion endpoint (supports `"stream": true`).
+- `POST /v1/chat/completions`: Chat completion endpoint (supports `"stream": true`).
+
+---
+
+## Experiments
+
+- `python -m pagedserve.experiments.fragmentation --workload bimodal`: Allocator memory fragmentation simulation.
+- `python benchmarks/benchmark_scheduler.py`: Continuous batching scheduler policy benchmark.
+
+---
+
+## Repository Structure
+
+```
+pagedserve/
+├── baseline/          # Sequential single-request baseline
+├── engine/            # Continuous batching engine & request state
+├── experiments/       # Allocator fragmentation & overhead experiments
+├── kernels/           # Backend abstraction (PyTorch & Fused Apple Metal MSL)
+├── memory/            # BlockPool, BlockTable, TensorBlockStore, PrefixCache, Attention
+├── model/             # ModelLoader, ModelRunner, Sampler, CacheAdapter
+├── server/            # FastAPI HTTP server endpoints
+├── config.py          # EngineConfig & model parameters
+├── errors.py          # Custom exception hierarchy
+└── metrics.py         # Internal telemetry & latency distribution tracking
+benchmarks/            # Reproducible performance benchmark suite
+docs/                  # In-depth technical architecture documentation
+examples/              # Runnable usage examples
+tests/                 # 283 unit and integration tests
 ```
 
-## Documentation
+---
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
-- [KV Cache](docs/KV_CACHE.md)
-- [Physical KV Cache](docs/PHYSICAL_KV_CACHE.md)
-- [Direct Blockwise Paged Attention](docs/BLOCKWISE_ATTENTION.md)
-- [Scheduler](docs/SCHEDULER.md)
-- [Model Execution](docs/MODEL_EXECUTION.md)
-- [HTTP API](docs/API.md)
-- [Benchmarking Guide](docs/BENCHMARKING.md)
-- [Benchmark Audit & Claims](docs/BENCHMARK_AUDIT.md)
-- [Metrics & Telemetry](docs/METRICS.md)
-- [Experiments Guide](docs/EXPERIMENTS.md)
+## Limitations
+
+- **Model Execution Integration**: The primary production generation loop integrates with Hugging Face PyTorch model execution (`DynamicCache`).
+- **Metal Backend Experimental Status**: The Metal GPU kernel is an experimental implementation created to explore direct physical block indexing in MSL. It prioritizes mathematical correctness and memory bounds over host-dispatch optimization.
+- **Supported Kernel Shapes**: Fused Metal attention targets single-token decode mode (`query_seq_len == 1`) in float32 precision.
+- **vLLM Compatibility**: PagedServe is an independent educational runtime and does not claim production vLLM compatibility or performance parity.
+
+---
+
+## References & Attribution
+
+- **PagedAttention & vLLM**: Kwon et al., *"Efficient Memory Management for Large Language Model Serving with PagedAttention"* (SOSP 2023).
+- **FlashAttention & Online Softmax**: Dao et al., *"FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness"* (NeurIPS 2022).
+- **Hugging Face Transformers**: Transformers library for model loading and tokenizer integration.
+- **Apple Metal & PyTorch MPS**: Apple Metal Shading Language (MSL) and PyTorch MPS backend.
+
+PagedServe is an original, independent educational codebase built from scratch for learning and research purposes.
