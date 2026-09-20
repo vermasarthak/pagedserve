@@ -3,16 +3,21 @@
 import math
 import statistics
 import time
+
 import torch
 
-from pagedserve.kernels import PyTorchPagedAttentionBackend, MetalPagedAttentionBackend, is_metal_available
+from pagedserve.kernels import (
+    MetalPagedAttentionBackend,
+    PyTorchPagedAttentionBackend,
+    is_metal_available,
+)
+from pagedserve.memory.attention import paged_attention_reference
 from pagedserve.memory.block_pool import BlockPool
 from pagedserve.memory.block_table import BlockTable
 from pagedserve.memory.geometry import KVCacheGeometry
+from pagedserve.memory.memory_estimator import estimate_attention_memory
 from pagedserve.memory.paged_view import PagedKVView
 from pagedserve.memory.tensor_block_store import TensorBlockStore
-from pagedserve.memory.attention import paged_attention_reference
-from pagedserve.memory.memory_estimator import estimate_attention_memory
 
 
 def run_benchmark(

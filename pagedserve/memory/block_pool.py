@@ -1,15 +1,14 @@
 """Physical Block Pool managing allocation, retention, and freeing of KV blocks."""
 
 from collections import deque
-from typing import List, Deque, Set
 
-from pagedserve.memory.block import KVBlock
 from pagedserve.errors import (
-    KVCacheExhaustedError,
-    InvalidBlockError,
-    DoubleFreeError,
     BlockInvariantError,
+    DoubleFreeError,
+    InvalidBlockError,
+    KVCacheExhaustedError,
 )
+from pagedserve.memory.block import KVBlock
 
 
 class BlockPool:
@@ -30,15 +29,15 @@ class BlockPool:
         self._block_size: int = block_size
 
         # Pre-allocate all block metadata instances
-        self._blocks: List[KVBlock] = [
+        self._blocks: list[KVBlock] = [
             KVBlock(block_id=i, capacity=block_size)
             for i in range(num_blocks)
         ]
 
         # Free list: queue of available block IDs (LIFO/FIFO)
         # Using deque for efficient pops and appends
-        self._free_queue: Deque[int] = deque(range(num_blocks))
-        self._free_set: Set[int] = set(range(num_blocks))
+        self._free_queue: deque[int] = deque(range(num_blocks))
+        self._free_set: set[int] = set(range(num_blocks))
 
         self.verify_invariants()
 
@@ -93,7 +92,7 @@ class BlockPool:
         block.allocate()
         return block
 
-    def allocate_many(self, count: int) -> List[KVBlock]:
+    def allocate_many(self, count: int) -> list[KVBlock]:
         """Atomically allocate multiple physical blocks.
         
         Guarantees that either all `count` blocks are allocated, or none are.
@@ -114,7 +113,7 @@ class BlockPool:
                 total=self._num_blocks,
             )
 
-        allocated: List[KVBlock] = []
+        allocated: list[KVBlock] = []
         for _ in range(count):
             block_id = self._free_queue.popleft()
             self._free_set.remove(block_id)

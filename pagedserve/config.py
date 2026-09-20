@@ -1,7 +1,6 @@
 """Global engine configuration and memory hyperparameters."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -10,7 +9,7 @@ class EngineConfig:
 
     # Model parameters
     model_name_or_path: str = "sshleifer/tiny-gpt2"
-    device: Optional[str] = None  # None for auto-detect (mps -> cuda -> cpu)
+    device: str | None = None  # None for auto-detect (mps -> cuda -> cpu)
     dtype: str = "float32"
 
     # KV memory block hyperparameters

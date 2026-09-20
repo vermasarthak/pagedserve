@@ -1,4 +1,3 @@
-import pytest
 from pagedserve.baseline.sequential import SequentialBaseline
 from pagedserve.engine.request import SamplingParams
 
@@ -18,8 +17,8 @@ def test_baseline_greedy_produces_output(cpu_loaded_model):
 
 def test_baseline_greedy_matches_engine(cpu_loaded_model):
     """Baseline greedy output must exactly match PagedServe engine output for equivalent prompts."""
-    from pagedserve.engine.engine import PagedServeEngine
     from pagedserve.config import EngineConfig
+    from pagedserve.engine.engine import PagedServeEngine
 
     prompt_tokens = [1, 2, 3, 4]
     sampling_params = SamplingParams(max_new_tokens=6, temperature=0.0)

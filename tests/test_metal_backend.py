@@ -1,17 +1,21 @@
 """Comprehensive correctness and equivalence unit tests for fused Apple Metal paged attention backend."""
 
 import math
+
 import pytest
 import torch
 
-from pagedserve.kernels import get_backend, MetalPagedAttentionBackend, PyTorchPagedAttentionBackend, is_metal_available
+from pagedserve.kernels import (
+    MetalPagedAttentionBackend,
+    PyTorchPagedAttentionBackend,
+    is_metal_available,
+)
+from pagedserve.memory.attention import paged_attention_reference
 from pagedserve.memory.block_pool import BlockPool
 from pagedserve.memory.block_table import BlockTable
 from pagedserve.memory.geometry import KVCacheGeometry
-from pagedserve.memory.tensor_block_store import TensorBlockStore
 from pagedserve.memory.paged_view import PagedKVView
-from pagedserve.memory.attention import paged_attention_reference
-
+from pagedserve.memory.tensor_block_store import TensorBlockStore
 
 # Skip all Metal tests if Metal execution is not available in the current environment
 pytestmark = pytest.mark.skipif(not is_metal_available(), reason="Metal execution backend is not supported in this environment.")

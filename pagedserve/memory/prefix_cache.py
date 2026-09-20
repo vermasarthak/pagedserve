@@ -2,10 +2,9 @@
 
 import hashlib
 from collections import OrderedDict
-from typing import Sequence, Optional, Dict, Tuple
+from collections.abc import Sequence
 
 from pagedserve.memory.block_pool import BlockPool
-from pagedserve.errors import InvalidBlockError
 
 
 def compute_prefix_block_hash(token_ids: Sequence[int], prev_hash: str = "") -> str:
@@ -91,7 +90,7 @@ class PrefixCache:
         """Check if a prefix hash is present in the cache without altering LRU order or metrics."""
         return prefix_hash in self._cache
 
-    def lookup(self, prefix_hash: str) -> Optional[int]:
+    def lookup(self, prefix_hash: str) -> int | None:
         """Look up a cached physical block by its chained prefix hash.
         
         If found: marks entry as most-recently-used, increments hits, returns physical_block_id.
@@ -129,7 +128,7 @@ class PrefixCache:
         if len(self._cache) > self._max_cached_blocks:
             self.evict_lru()
 
-    def evict_lru(self) -> Optional[Tuple[str, int]]:
+    def evict_lru(self) -> tuple[str, int] | None:
         """Evict the least recently used cached block and release the cache's reference."""
         if not self._cache:
             return None

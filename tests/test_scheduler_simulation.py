@@ -1,6 +1,7 @@
 """High-level continuous batching simulation test with heterogeneous mixed workloads."""
 
 import time
+
 from pagedserve.engine.request import InferenceRequest, SamplingParams
 from pagedserve.engine.state import RequestState
 from pagedserve.memory.kv_cache import KVCacheManager

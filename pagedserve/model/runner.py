@@ -1,7 +1,9 @@
 """Model runner executing prefill, chunked prefill, and auto-regressive decode steps."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Optional, Sequence, Tuple
+from typing import Any
+
 import torch
 
 from pagedserve.model.loader import LoadedModel
@@ -24,8 +26,8 @@ class ModelSequenceState:
     """
 
     request_id: str
-    past_key_values: Optional[Any] = None
-    last_logits: Optional[torch.Tensor] = None
+    past_key_values: Any | None = None
+    last_logits: torch.Tensor | None = None
     seq_length: int = 0
 
 
@@ -44,8 +46,8 @@ class ModelRunner:
         self,
         request_id: str,
         token_ids: Sequence[int],
-        existing_state: Optional[ModelSequenceState] = None,
-    ) -> Tuple[torch.Tensor, ModelSequenceState]:
+        existing_state: ModelSequenceState | None = None,
+    ) -> tuple[torch.Tensor, ModelSequenceState]:
         """Execute a prefill forward pass on a full prompt or a prompt chunk.
         
         Args:
@@ -89,7 +91,7 @@ class ModelRunner:
         request_id: str,
         next_token_id: int,
         state: ModelSequenceState,
-    ) -> Tuple[torch.Tensor, ModelSequenceState]:
+    ) -> tuple[torch.Tensor, ModelSequenceState]:
         """Execute a single-token auto-regressive decode step reusing past KV activations.
         
         Mandatory: Feeds ONLY the single new token into the transformer, relying on

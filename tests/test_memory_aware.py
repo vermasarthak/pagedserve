@@ -1,6 +1,5 @@
-import pytest
-from pagedserve.scheduler.policy import MemoryAwarePolicy, KVPressureLevel
 from pagedserve.engine.request import InferenceRequest, SamplingParams
+from pagedserve.scheduler.policy import KVPressureLevel, MemoryAwarePolicy
 
 
 def test_memory_aware_pressure_levels():

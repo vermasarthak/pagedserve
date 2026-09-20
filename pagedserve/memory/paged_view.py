@@ -1,13 +1,12 @@
 """Request-level paged cache view object providing gathered access to non-contiguous physical blocks."""
 
-from typing import List, Tuple
 import torch
+from transformers.cache_utils import DynamicCache
 
 from pagedserve.memory.block_table import BlockTable
-from pagedserve.memory.tensor_block_store import TensorBlockStore
 from pagedserve.memory.scatter_gather import CacheScatterGather
+from pagedserve.memory.tensor_block_store import TensorBlockStore
 from pagedserve.model.cache_adapter import CacheAdapter
-from transformers.cache_utils import DynamicCache
 
 
 class PagedKVView:
@@ -56,7 +55,7 @@ class PagedKVView:
         )
         return v
 
-    def gather_layer(self, layer_idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def gather_layer(self, layer_idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         """Gather both Key and Value canonical sequences for a given layer."""
         return self._scatter_gather.gather_sequence_layer(
             layer_idx=layer_idx, block_table=self.block_table, seq_length=self.seq_length

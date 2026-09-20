@@ -1,7 +1,7 @@
 """Integration tests for PagedServeEngine: end-to-end generation, reference correctness, and cleanup."""
 
-import pytest
 import torch
+
 from pagedserve.config import EngineConfig
 from pagedserve.engine.engine import PagedServeEngine
 from pagedserve.engine.request import SamplingParams

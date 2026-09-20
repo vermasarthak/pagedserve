@@ -1,5 +1,8 @@
-import pytest
-from pagedserve.experiments.fragmentation import run_experiment, ContiguousAllocator, BlockAllocator
+from pagedserve.experiments.fragmentation import (
+    BlockAllocator,
+    ContiguousAllocator,
+    run_experiment,
+)
 
 
 def test_fragmentation_allocator_semantics():

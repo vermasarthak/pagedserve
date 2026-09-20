@@ -1,6 +1,5 @@
 """Exhaustive tests for PrefixCache: hashing, reference ownership, LRU eviction, and zero leaks."""
 
-import pytest
 from pagedserve.memory.block_pool import BlockPool
 from pagedserve.memory.kv_cache import KVCacheManager
 from pagedserve.memory.prefix_cache import PrefixCache, compute_prefix_block_hash

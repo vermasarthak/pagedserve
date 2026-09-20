@@ -1,7 +1,7 @@
 """Memory overhead estimation utilities for full-sequence gather vs direct blockwise paged attention."""
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Optional
 
 
 @dataclass
@@ -68,13 +68,15 @@ def estimate_attention_memory(
 
 
 def compare_sequence_scaling(
-    sequence_lengths: List[int] = [128, 512, 2048, 8192],
+    sequence_lengths: Optional[list[int]] = None,
     num_heads: int = 12,
     head_dim: int = 64,
     block_size: int = 16,
     dtype_bytes: int = 4,
-) -> List[MemoryEstimate]:
+) -> list[MemoryEstimate]:
     """Compare memory scaling across multiple sequence lengths."""
+    if sequence_lengths is None:
+        sequence_lengths = [128, 512, 2048, 8192]
     return [
         estimate_attention_memory(
             sequence_length=seq_len,

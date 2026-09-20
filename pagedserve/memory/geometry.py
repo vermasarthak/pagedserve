@@ -1,16 +1,15 @@
 """KV Cache Geometry metadata structure derived from loaded transformer models."""
 
 from dataclasses import dataclass
-from typing import Any, Optional
+
 import torch
 
-from pagedserve.model.loader import LoadedModel
 from pagedserve.errors import PagedServeError
+from pagedserve.model.loader import LoadedModel
 
 
 class UnsupportedArchitectureError(PagedServeError):
     """Raised when an unsupported model architecture is supplied for physical KV cache geometry."""
-    pass
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,7 @@
 """Pydantic schemas for the PagedServe HTTP API (OpenAI-compatible subset)."""
 
-from typing import Optional, List, Literal
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -12,7 +13,7 @@ class CompletionRequest(BaseModel):
     top_p: float = Field(1.0, gt=0.0, le=1.0)
     top_k: int = Field(50, ge=0)
     stream: bool = False
-    stop: Optional[List[str]] = None
+    stop: list[str] | None = None
 
 
 class ChatMessage(BaseModel):
@@ -22,13 +23,13 @@ class ChatMessage(BaseModel):
 
 class ChatCompletionRequest(BaseModel):
     model: str = "pagedserve"
-    messages: List[ChatMessage] = Field(..., min_length=1)
+    messages: list[ChatMessage] = Field(..., min_length=1)
     max_tokens: int = Field(64, ge=1, le=2048)
     temperature: float = Field(1.0, ge=0.0, le=2.0)
     top_p: float = Field(1.0, gt=0.0, le=1.0)
     top_k: int = Field(50, ge=0)
     stream: bool = False
-    stop: Optional[List[str]] = None
+    stop: list[str] | None = None
 
 
 class UsageInfo(BaseModel):
@@ -40,31 +41,31 @@ class UsageInfo(BaseModel):
 class CompletionChoice(BaseModel):
     text: str
     index: int = 0
-    finish_reason: Optional[str] = None
+    finish_reason: str | None = None
 
 
 class CompletionResponse(BaseModel):
     id: str
     object: str = "text_completion"
     model: str
-    choices: List[CompletionChoice]
+    choices: list[CompletionChoice]
     usage: UsageInfo
 
 
 class ChatCompletionChoice(BaseModel):
     index: int = 0
     message: ChatMessage
-    finish_reason: Optional[str] = None
+    finish_reason: str | None = None
 
 
 class ChatCompletionResponse(BaseModel):
     id: str
     object: str = "chat.completion"
     model: str
-    choices: List[ChatCompletionChoice]
+    choices: list[ChatCompletionChoice]
     usage: UsageInfo
 
 
 class ErrorResponse(BaseModel):
     error: str
-    detail: Optional[str] = None
+    detail: str | None = None

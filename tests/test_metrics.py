@@ -1,4 +1,3 @@
-import pytest
 from pagedserve.metrics import EngineMetrics, LatencyStats
 
 

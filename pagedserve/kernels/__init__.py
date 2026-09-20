@@ -1,8 +1,11 @@
 """PagedAttention kernel execution backends."""
 
 from pagedserve.kernels.backend import PagedAttentionBackend
+from pagedserve.kernels.metal_backend import (
+    MetalPagedAttentionBackend,
+    is_metal_available,
+)
 from pagedserve.kernels.pytorch_backend import PyTorchPagedAttentionBackend
-from pagedserve.kernels.metal_backend import MetalPagedAttentionBackend, is_metal_available
 
 
 def get_backend(name: str = "auto") -> PagedAttentionBackend:

@@ -1,16 +1,20 @@
 """Microbenchmark comparing Contiguous Attention, Gather-based Paged Attention, and Direct Blockwise Paged Attention."""
 
-import time
 import math
+import time
+
 import torch
 
-from pagedserve.memory.geometry import KVCacheGeometry
+from pagedserve.memory.attention import (
+    paged_attention_blockwise,
+    paged_attention_reference,
+)
 from pagedserve.memory.block_pool import BlockPool
 from pagedserve.memory.block_table import BlockTable
-from pagedserve.memory.tensor_block_store import TensorBlockStore
-from pagedserve.memory.paged_view import PagedKVView
-from pagedserve.memory.attention import paged_attention_reference, paged_attention_blockwise
+from pagedserve.memory.geometry import KVCacheGeometry
 from pagedserve.memory.memory_estimator import estimate_attention_memory
+from pagedserve.memory.paged_view import PagedKVView
+from pagedserve.memory.tensor_block_store import TensorBlockStore
 
 
 def run_benchmark(
@@ -23,11 +27,11 @@ def run_benchmark(
     num_iters: int = 50,
 ):
     device = torch.device(device_str)
-    print(f"\n==========================================================")
+    print("\n==========================================================")
     print(f" BLOCKWISE ATTENTION BENCHMARK — Device: {device_str.upper()}")
-    print(f"==========================================================\n")
-    print(f"| Seq Len | Mode | Mean Latency (ms) | Peak Temp Memory (KB) | Memory Reduction |")
-    print(f"|---------|------|-------------------|-----------------------|------------------|")
+    print("==========================================================\n")
+    print("| Seq Len | Mode | Mean Latency (ms) | Peak Temp Memory (KB) | Memory Reduction |")
+    print("|---------|------|-------------------|-----------------------|------------------|")
 
     for seq_len in sequence_lengths:
         geom = KVCacheGeometry(
@@ -97,7 +101,7 @@ def run_benchmark(
         print(f"| {seq_len:<7} | Contiguous | {t_cont:17.3f} | {mem_est.gather_memory_kb:21.1f} | 1.0x             |")
         print(f"| {seq_len:<7} | Gather Ref | {t_ref:17.3f} | {mem_est.gather_memory_kb:21.1f} | 1.0x             |")
         print(f"| {seq_len:<7} | Blockwise  | {t_bw:17.3f} | {mem_est.blockwise_memory_kb:21.1f} | {mem_est.reduction_factor:4.1f}x            |")
-        print(f"|---------|------|-------------------|-----------------------|------------------|")
+        print("|---------|------|-------------------|-----------------------|------------------|")
 
 
 if __name__ == "__main__":

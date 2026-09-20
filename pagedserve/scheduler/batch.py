@@ -1,8 +1,7 @@
 """Batch and scheduled item representations for inference execution."""
 
-from enum import Enum
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from enum import Enum
 
 
 class WorkType(str, Enum):
@@ -20,10 +19,10 @@ class ScheduledItem:
     num_tokens: int
 
     # For PREFILL: range of token offsets in the prompt [start_idx, end_idx)
-    prompt_token_range: Optional[Tuple[int, int]] = None
+    prompt_token_range: tuple[int, int] | None = None
 
     # For DECODE: the zero-indexed output token position being generated
-    decode_step_idx: Optional[int] = None
+    decode_step_idx: int | None = None
 
     def __post_init__(self) -> None:
         if self.num_tokens <= 0:
@@ -38,7 +37,7 @@ class ScheduledItem:
 class SchedulerBatch:
     """The aggregate batch of work scheduled for execution in a single engine step."""
 
-    items: List[ScheduledItem] = field(default_factory=list)
+    items: list[ScheduledItem] = field(default_factory=list)
 
     @property
     def is_empty(self) -> bool:
@@ -61,12 +60,12 @@ class SchedulerBatch:
         return sum(item.num_tokens for item in self.items if item.work_type == WorkType.DECODE)
 
     @property
-    def prefill_items(self) -> List[ScheduledItem]:
+    def prefill_items(self) -> list[ScheduledItem]:
         """List of scheduled prefill operations."""
         return [item for item in self.items if item.work_type == WorkType.PREFILL]
 
     @property
-    def decode_items(self) -> List[ScheduledItem]:
+    def decode_items(self) -> list[ScheduledItem]:
         """List of scheduled decode operations."""
         return [item for item in self.items if item.work_type == WorkType.DECODE]
 

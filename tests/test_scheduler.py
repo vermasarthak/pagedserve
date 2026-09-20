@@ -1,13 +1,12 @@
 """Comprehensive unit tests for the Continuous Batching Scheduler, Prefill/Decode, and Chunking."""
 
 import time
-import pytest
+
 from pagedserve.engine.request import InferenceRequest, SamplingParams
 from pagedserve.engine.state import RequestState
 from pagedserve.memory.kv_cache import KVCacheManager
 from pagedserve.scheduler.batch import WorkType
 from pagedserve.scheduler.scheduler import Scheduler
-from pagedserve.errors import InvalidRequestError, InvalidRequestStateError
 
 
 def make_request(req_id: str, prompt_len: int, max_new_tokens: int = 5, arrival_offset: float = 0.0) -> InferenceRequest:

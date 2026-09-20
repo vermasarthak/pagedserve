@@ -2,22 +2,22 @@
 """PagedServe latency benchmark: measure TTFT and per-token latency."""
 
 import argparse
-import time
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from pagedserve.model.loader import ModelLoader
-from pagedserve.engine.request import SamplingParams
-from pagedserve.config import EngineConfig
-from pagedserve.engine.engine import PagedServeEngine
 from benchmarks.benchmark_utils import (
     BenchmarkResult,
+    generate_synthetic_prompts,
     get_hardware_info,
     save_result,
-    generate_synthetic_prompts,
 )
+from pagedserve.config import EngineConfig
+from pagedserve.engine.engine import PagedServeEngine
+from pagedserve.engine.request import SamplingParams
+from pagedserve.model.loader import ModelLoader
 
 
 def main():

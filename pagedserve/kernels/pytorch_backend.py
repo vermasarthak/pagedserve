@@ -1,11 +1,11 @@
 """PyTorch reference backend executing direct blockwise online-softmax paged attention."""
 
-from typing import Optional
+
 import torch
 
 from pagedserve.kernels.backend import PagedAttentionBackend
-from pagedserve.memory.paged_view import PagedKVView
 from pagedserve.memory.attention import paged_attention_blockwise
+from pagedserve.memory.paged_view import PagedKVView
 
 
 class PyTorchPagedAttentionBackend(PagedAttentionBackend):
@@ -16,7 +16,7 @@ class PyTorchPagedAttentionBackend(PagedAttentionBackend):
         query: torch.Tensor,
         paged_view: PagedKVView,
         layer_idx: int,
-        scale: Optional[float] = None,
+        scale: float | None = None,
     ) -> torch.Tensor:
         """Forward pass delegating to paged_attention_blockwise."""
         return paged_attention_blockwise(

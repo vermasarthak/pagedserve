@@ -1,7 +1,8 @@
 """Shared test fixtures for PagedServe test suite."""
 
 import pytest
-from pagedserve.model.loader import ModelLoader, LoadedModel
+
+from pagedserve.model.loader import LoadedModel, ModelLoader
 
 
 @pytest.fixture(scope="session")

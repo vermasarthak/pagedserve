@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Dict
+
 from pagedserve.engine.request import InferenceRequest
 
 
@@ -10,14 +10,12 @@ class SchedulingPolicy(ABC):
     """Abstract interface for request prioritization and scheduling policies."""
 
     @abstractmethod
-    def sort_waiting(self, requests: List[InferenceRequest]) -> List[InferenceRequest]:
+    def sort_waiting(self, requests: list[InferenceRequest]) -> list[InferenceRequest]:
         """Order waiting requests for admission consideration."""
-        pass
 
     @abstractmethod
-    def sort_running_decode(self, requests: List[InferenceRequest]) -> List[InferenceRequest]:
+    def sort_running_decode(self, requests: list[InferenceRequest]) -> list[InferenceRequest]:
         """Order active decode requests for execution priority."""
-        pass
 
 
 class FCFSPolicy(SchedulingPolicy):
@@ -28,10 +26,10 @@ class FCFSPolicy(SchedulingPolicy):
     and highly deterministic testing behavior.
     """
 
-    def sort_waiting(self, requests: List[InferenceRequest]) -> List[InferenceRequest]:
+    def sort_waiting(self, requests: list[InferenceRequest]) -> list[InferenceRequest]:
         return sorted(requests, key=lambda r: r.arrival_time)
 
-    def sort_running_decode(self, requests: List[InferenceRequest]) -> List[InferenceRequest]:
+    def sort_running_decode(self, requests: list[InferenceRequest]) -> list[InferenceRequest]:
         return sorted(requests, key=lambda r: r.arrival_time)
 
 
@@ -68,7 +66,7 @@ class MemoryAwarePolicy(SchedulingPolicy):
         self.low_threshold = low_threshold
         self.high_threshold = high_threshold
         self.starvation_penalty_iters = starvation_penalty_iters
-        self._wait_iters: Dict[str, int] = {}
+        self._wait_iters: dict[str, int] = {}
 
     def pressure_level(self, kv_utilization: float) -> str:
         if kv_utilization >= self.high_threshold:
@@ -89,10 +87,10 @@ class MemoryAwarePolicy(SchedulingPolicy):
         aging_bonus = min(wait_iters / self.starvation_penalty_iters, 1.0)
         return r.arrival_time - aging_bonus
 
-    def sort_waiting(self, requests: List[InferenceRequest]) -> List[InferenceRequest]:
+    def sort_waiting(self, requests: list[InferenceRequest]) -> list[InferenceRequest]:
         return sorted(requests, key=self._priority_key)
 
-    def sort_running_decode(self, requests: List[InferenceRequest]) -> List[InferenceRequest]:
+    def sort_running_decode(self, requests: list[InferenceRequest]) -> list[InferenceRequest]:
         # Under pressure, prefer requests closest to completion (shortest remaining tokens)
         return sorted(requests, key=lambda r: r.remaining_tokens)
 

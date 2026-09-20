@@ -1,5 +1,7 @@
 # PagedServe
 
+[![CI](https://github.com/vermasarthak/pagedserve/actions/workflows/ci.yml/badge.svg)](https://github.com/vermasarthak/pagedserve/actions/workflows/ci.yml)
+
 PagedServe is an experimental LLM inference runtime built from scratch to explore paged KV memory, continuous batching, direct blockwise attention, and custom GPU kernels.
 
 ## Why I Built This
@@ -23,6 +25,15 @@ flowchart TD
     AttentionBackend -->|PyTorch Fallback| PyTorchBackend["PyTorch Blockwise (Online Softmax)"]
     AttentionBackend -->|Apple Metal GPU| MetalBackend["Fused Apple Metal MSL Kernel"]
 ```
+
+### Architecture Boundary & Implementation Scope
+
+PagedServe is an experimental LLM inference runtime engineered to measure, evaluate, and benchmark inference subsystems.
+
+- **Integrated End-to-End**: The continuous batching scheduler (`Scheduler`), request state machine (`InferenceRequest`), memory pressure admission control, block allocation pool (`BlockPool`), prefix cache (`PrefixCache`), FastAPI REST & SSE streaming server (`api.py`), and metrics telemetry (`metrics.py`).
+- **Real-Model Execution**: Real transformer model inference (`ModelRunner` / `ModelLoader`) executes Hugging Face PyTorch models (`distilgpt2`, `TinyLlama-1.1B`) using standard Hugging Face transformer cache state where applicable.
+- **Experimental Subsystems**: The physical 5D KV tensor block store (`TensorBlockStore`), PyTorch online-softmax blockwise attention (`paged_attention_blockwise`), and fused Apple Metal MSL GPU kernel (`paged_attention_decode_kernel`) exist as modular, independent subsystems with dedicated unit tests and microbenchmarks.
+
 
 ## Core Systems
 

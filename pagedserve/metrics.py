@@ -1,9 +1,7 @@
 """Internal metrics collection for PagedServe engine telemetry."""
 
 import time
-import statistics
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
 
 
 @dataclass
@@ -12,14 +10,14 @@ class LatencyStats:
 
     count: int = 0
     total: float = 0.0
-    _samples: List[float] = field(default_factory=list, repr=False)
+    _samples: list[float] = field(default_factory=list, repr=False)
 
     def record(self, value: float) -> None:
         self.count += 1
         self.total += value
         self._samples.append(value)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         if not self._samples:
             return {"count": 0, "mean": None, "p50": None, "p95": None, "p99": None}
         sorted_s = sorted(self._samples)
@@ -67,6 +65,7 @@ class EngineMetrics:
         self.requests_waiting: int = 0
         self.requests_running: int = 0
         self.kv_blocks_total: int = 0
+        self.kv_blocks_used: int = 0
         # Physical KV tensor store telemetry (set externally when physical store is enabled)
         self.bytes_per_block: int = 0
 
@@ -75,7 +74,7 @@ class EngineMetrics:
         self.prompt_tokens_total += prompt_tokens
 
     def on_request_completed(
-        self, generated_tokens: int, ttft: Optional[float], total_latency: Optional[float]
+        self, generated_tokens: int, ttft: float | None, total_latency: float | None
     ) -> None:
         self.requests_completed += 1
         self.generated_tokens_total += generated_tokens
@@ -148,7 +147,7 @@ class EngineMetrics:
             return 0.0
         return self.generated_tokens_total / uptime
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "uptime_seconds": round(self.uptime_seconds, 3),
             "requests": {

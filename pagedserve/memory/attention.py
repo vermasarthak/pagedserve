@@ -1,7 +1,7 @@
 """Correctness reference paged attention math implementation."""
 
 import math
-from typing import Optional
+
 import torch
 
 from pagedserve.memory.paged_view import PagedKVView
@@ -11,7 +11,7 @@ def paged_attention_reference(
     query: torch.Tensor,
     paged_view: PagedKVView,
     layer_idx: int,
-    scale: Optional[float] = None,
+    scale: float | None = None,
 ) -> torch.Tensor:
     """Correctness reference implementation for paged attention.
     
@@ -78,7 +78,7 @@ def paged_attention_blockwise(
     query: torch.Tensor,
     paged_view: PagedKVView,
     layer_idx: int,
-    scale: Optional[float] = None,
+    scale: float | None = None,
 ) -> torch.Tensor:
     """Direct blockwise paged attention using incremental online softmax.
     
@@ -118,9 +118,9 @@ def paged_attention_blockwise(
     # max_score: [1, num_attn_heads, query_seq_len, 1]
     # sum_exp:   [1, num_attn_heads, query_seq_len, 1]
     # acc:       [1, num_attn_heads, query_seq_len, head_dim]
-    max_score: Optional[torch.Tensor] = None
-    sum_exp: Optional[torch.Tensor] = None
-    acc: Optional[torch.Tensor] = None
+    max_score: torch.Tensor | None = None
+    sum_exp: torch.Tensor | None = None
+    acc: torch.Tensor | None = None
 
     for block_idx, phys_block_id in enumerate(block_table.blocks):
         start_token_idx = block_idx * block_size

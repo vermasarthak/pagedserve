@@ -1,9 +1,8 @@
 """PagedServe FastAPI HTTP Server."""
 
-import os
 import asyncio
+import os
 from contextlib import asynccontextmanager
-from typing import Optional, List
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -16,24 +15,24 @@ from pagedserve.model.loader import ModelLoader
 from pagedserve.scheduler.policy import FCFSPolicy
 from pagedserve.scheduler.scheduler import Scheduler
 from pagedserve.server.schemas import (
-    CompletionRequest,
-    CompletionResponse,
-    CompletionChoice,
+    ChatCompletionChoice,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatCompletionChoice,
     ChatMessage,
+    CompletionChoice,
+    CompletionRequest,
+    CompletionResponse,
     UsageInfo,
 )
 from pagedserve.server.streaming import (
-    format_sse_event,
     format_sse_done,
-    stream_event_to_completion_chunk,
+    format_sse_event,
     stream_event_to_chat_chunk,
+    stream_event_to_completion_chunk,
 )
 
 
-def format_chat_messages(messages: List[ChatMessage]) -> str:
+def format_chat_messages(messages: list[ChatMessage]) -> str:
     """Convert chat messages to text using a simple deterministic fallback."""
     parts = []
     for msg in messages:
@@ -43,8 +42,8 @@ def format_chat_messages(messages: List[ChatMessage]) -> str:
     return "\n".join(parts)
 
 
-_engine: Optional[PagedServeEngine] = None
-_config: Optional[EngineConfig] = None
+_engine: PagedServeEngine | None = None
+_config: EngineConfig | None = None
 
 
 def get_engine() -> PagedServeEngine:
@@ -55,15 +54,15 @@ def get_engine() -> PagedServeEngine:
 
 def create_app(
     model_name_or_path: str = "sshleifer/tiny-gpt2",
-    device: Optional[str] = None,
-    dtype: Optional[str] = None,
+    device: str | None = None,
+    dtype: str | None = None,
     num_blocks: int = 256,
     block_size: int = 16,
     max_num_sequences: int = 16,
     max_batch_tokens: int = 2048,
     max_prefill_tokens_per_step: int = 512,
     enable_prefix_caching: bool = True,
-    engine_instance: Optional[PagedServeEngine] = None,
+    engine_instance: PagedServeEngine | None = None,
 ) -> FastAPI:
     """Factory that creates a FastAPI application with a shared PagedServe engine."""
     global _engine, _config
@@ -97,7 +96,14 @@ def create_app(
                 num_blocks=cfg.num_blocks,
                 enable_prefix_caching=cfg.enable_prefix_caching,
             )
-            scheduler = Scheduler(cfg, kv_cache, FCFSPolicy())
+            scheduler = Scheduler(
+                kv_cache_mgr=kv_cache,
+                max_num_sequences=cfg.max_num_sequences,
+                max_batch_tokens=cfg.max_batch_tokens,
+                max_prefill_tokens=cfg.max_prefill_tokens_per_step,
+                prefill_chunk_size=cfg.max_prefill_tokens_per_step,
+                policy=FCFSPolicy(),
+            )
             _engine = PagedServeEngine(cfg, loaded, scheduler, kv_cache)
         yield
         _engine = None

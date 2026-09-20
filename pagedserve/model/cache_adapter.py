@@ -5,17 +5,17 @@ Canonical Internal PagedServe Cache Shape:
   or Tuple[Tensor, Tensor] per layer: (Key, Value)
 """
 
-from typing import Any, List, Tuple
+from typing import Any
+
 import torch
 from transformers.cache_utils import DynamicCache
 
-from pagedserve.memory.geometry import KVCacheGeometry
 from pagedserve.errors import PagedServeError
+from pagedserve.memory.geometry import KVCacheGeometry
 
 
 class CacheAdapterError(PagedServeError):
     """Raised when Hugging Face cache conversion fails."""
-    pass
 
 
 class CacheAdapter:
@@ -29,7 +29,7 @@ class CacheAdapter:
     @staticmethod
     def hf_cache_to_canonical(
         past_key_values: Any, layer_idx: int
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Extract canonical single-sequence Key and Value tensors for a specified layer from HF cache.
         
         Supports:
@@ -85,7 +85,7 @@ class CacheAdapter:
 
     @staticmethod
     def canonical_to_hf_cache(
-        layer_kv_pairs: List[Tuple[torch.Tensor, torch.Tensor]],
+        layer_kv_pairs: list[tuple[torch.Tensor, torch.Tensor]],
         geometry: KVCacheGeometry,
     ) -> DynamicCache:
         """Convert a list of canonical layer (key, value) tensors back into a Hugging Face DynamicCache.

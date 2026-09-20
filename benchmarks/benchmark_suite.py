@@ -6,26 +6,25 @@ and model comparisons (sshleifer/tiny-gpt2 vs distilgpt2).
 """
 
 import argparse
-import time
-import sys
 import json
+import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from pagedserve.model.loader import ModelLoader
-from pagedserve.config import EngineConfig
-from pagedserve.engine.engine import PagedServeEngine
-from pagedserve.engine.request import SamplingParams
-from pagedserve.baseline.sequential import SequentialBaseline
 from benchmarks.benchmark_utils import (
     MultiTrialBenchmarkResult,
     TrialStats,
+    generate_exact_token_prompts,
     get_hardware_info,
     save_multi_trial_result,
-    generate_exact_token_prompts,
     synchronize_device,
 )
+from pagedserve.config import EngineConfig
+from pagedserve.engine.engine import PagedServeEngine
+from pagedserve.engine.request import SamplingParams
+from pagedserve.model.loader import ModelLoader
 
 WORKLOAD_PROFILES = {
     "MICRO": {"prompt_tokens": 16, "output_tokens": 8},
@@ -49,9 +48,9 @@ def run_benchmark_matrix(
     summary_records = []
 
     for model_name in models:
-        print(f"\n==========================================")
+        print("\n==========================================")
         print(f"LOADING MODEL: {model_name}")
-        print(f"==========================================")
+        print("==========================================")
         try:
             loaded = ModelLoader.load(model_name, dtype="float32")
         except Exception as e:

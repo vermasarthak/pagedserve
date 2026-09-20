@@ -1,16 +1,20 @@
 """Model and Tokenizer loading abstraction for Hugging Face causal language models."""
 
 from dataclasses import dataclass
-from typing import Optional
+
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, PreTrainedModel, PreTrainedTokenizerBase
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    PreTrainedModel,
+    PreTrainedTokenizerBase,
+)
 
 from pagedserve.errors import PagedServeError
 
 
 class ModelLoadError(PagedServeError):
     """Raised when model or tokenizer loading fails."""
-    pass
 
 
 @dataclass
@@ -43,7 +47,7 @@ class ModelLoader:
     """Responsible for resolving devices, dtypes, and loading causal language models."""
 
     @staticmethod
-    def resolve_device(requested_device: Optional[str] = None) -> torch.device:
+    def resolve_device(requested_device: str | None = None) -> torch.device:
         """Select execution device following: explicit user choice -> CUDA -> MPS -> CPU."""
         if requested_device is not None:
             return torch.device(requested_device)
@@ -56,7 +60,7 @@ class ModelLoader:
             return torch.device("cpu")
 
     @staticmethod
-    def resolve_dtype(device: torch.device, requested_dtype: Optional[str] = None) -> torch.dtype:
+    def resolve_dtype(device: torch.device, requested_dtype: str | None = None) -> torch.dtype:
         """Select safe floating point precision for the chosen device."""
         if requested_dtype is not None:
             dtype_map = {
@@ -82,8 +86,8 @@ class ModelLoader:
     def load(
         cls,
         model_name_or_path: str = "sshleifer/tiny-gpt2",
-        device: Optional[str] = None,
-        dtype: Optional[str] = None,
+        device: str | None = None,
+        dtype: str | None = None,
     ) -> LoadedModel:
         """Load tokenizer and causal LM weights from Hugging Face or local path.
         
@@ -135,5 +139,5 @@ class ModelLoader:
 
         except Exception as e:
             raise ModelLoadError(
-                f"Failed to load model '{model_name_or_path}' on device '{target_device}': {str(e)}"
+                f"Failed to load model '{model_name_or_path}' on device '{target_device}': {e!s}"
             ) from e

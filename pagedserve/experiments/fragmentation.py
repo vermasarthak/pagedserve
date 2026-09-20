@@ -9,7 +9,6 @@ import datetime
 import json
 import random
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Dict
 from pathlib import Path
 
 
@@ -26,9 +25,9 @@ class ContiguousAllocator:
 
     def __init__(self, total_size: int) -> None:
         self.total_size = total_size
-        self._allocations: List[Allocation] = []
+        self._allocations: list[Allocation] = []
 
-    def _free_holes(self) -> List[Tuple[int, int]]:
+    def _free_holes(self) -> list[tuple[int, int]]:
         prev_end = 0
         holes = []
         for a in sorted(self._allocations, key=lambda x: x.start):
@@ -88,7 +87,7 @@ class BlockAllocator:
         self.block_size = block_size
         self.total_blocks = total_size // block_size
         self._free_blocks: int = self.total_blocks
-        self._allocations: Dict[str, int] = {}
+        self._allocations: dict[str, int] = {}
 
     def blocks_needed(self, tokens: int) -> int:
         return (tokens + self.block_size - 1) // self.block_size
@@ -129,7 +128,7 @@ class WorkloadEvent:
     tokens: int
 
 
-def generate_uniform_workload(n: int, total_size: int, seed: int = 42) -> List[WorkloadEvent]:
+def generate_uniform_workload(n: int, total_size: int, seed: int = 42) -> list[WorkloadEvent]:
     rng = random.Random(seed)
     events = []
     for i in range(n):
@@ -140,7 +139,7 @@ def generate_uniform_workload(n: int, total_size: int, seed: int = 42) -> List[W
     return sorted(events, key=lambda e: e.arrival_tick)
 
 
-def generate_bimodal_workload(n: int, total_size: int, seed: int = 42) -> List[WorkloadEvent]:
+def generate_bimodal_workload(n: int, total_size: int, seed: int = 42) -> list[WorkloadEvent]:
     rng = random.Random(seed)
     events = []
     for i in range(n):
@@ -154,7 +153,7 @@ def generate_bimodal_workload(n: int, total_size: int, seed: int = 42) -> List[W
     return sorted(events, key=lambda e: e.arrival_tick)
 
 
-def generate_heavy_tail_workload(n: int, total_size: int, seed: int = 42) -> List[WorkloadEvent]:
+def generate_heavy_tail_workload(n: int, total_size: int, seed: int = 42) -> list[WorkloadEvent]:
     rng = random.Random(seed)
     events = []
     for i in range(n):
@@ -171,17 +170,17 @@ class SimResult:
     allocator_type: str
     workload: str
     total_size: int
-    block_size: Optional[int]
+    block_size: int | None
     num_requests: int
     allocation_successes: int = 0
     allocation_failures: int = 0
     failure_despite_free_capacity: int = 0
     peak_utilization: float = 0.0
-    utilization_samples: List[float] = field(default_factory=list)
-    internal_fragmentation_samples: List[float] = field(default_factory=list)
-    external_fragmentation_samples: List[float] = field(default_factory=list)
+    utilization_samples: list[float] = field(default_factory=list)
+    internal_fragmentation_samples: list[float] = field(default_factory=list)
+    external_fragmentation_samples: list[float] = field(default_factory=list)
 
-    def summary(self) -> Dict:
+    def summary(self) -> dict:
         import statistics
 
         d = {
@@ -210,7 +209,7 @@ class SimResult:
 
 
 def simulate_contiguous(
-    events: List[WorkloadEvent], total_size: int, workload_name: str
+    events: list[WorkloadEvent], total_size: int, workload_name: str
 ) -> SimResult:
     alloc = ContiguousAllocator(total_size)
     result = SimResult(
@@ -220,10 +219,10 @@ def simulate_contiguous(
         block_size=None,
         num_requests=len(events),
     )
-    active: Dict[str, int] = {}
+    active: dict[str, int] = {}
 
     max_tick = max((e.arrival_tick + e.lifetime_ticks for e in events), default=1)
-    event_map: Dict[int, List[WorkloadEvent]] = {}
+    event_map: dict[int, list[WorkloadEvent]] = {}
     for e in events:
         event_map.setdefault(e.arrival_tick, []).append(e)
 
@@ -253,7 +252,7 @@ def simulate_contiguous(
 
 
 def simulate_block(
-    events: List[WorkloadEvent], total_size: int, block_size: int, workload_name: str
+    events: list[WorkloadEvent], total_size: int, block_size: int, workload_name: str
 ) -> SimResult:
     alloc = BlockAllocator(total_size, block_size)
     result = SimResult(
@@ -263,10 +262,10 @@ def simulate_block(
         block_size=block_size,
         num_requests=len(events),
     )
-    active: Dict[str, Tuple[int, int]] = {}
+    active: dict[str, tuple[int, int]] = {}
 
     max_tick = max((e.arrival_tick + e.lifetime_ticks for e in events), default=1)
-    event_map: Dict[int, List[WorkloadEvent]] = {}
+    event_map: dict[int, list[WorkloadEvent]] = {}
     for e in events:
         event_map.setdefault(e.arrival_tick, []).append(e)
 
@@ -301,7 +300,7 @@ def run_experiment(
     seed: int = 42,
     output_dir: str = "benchmarks/results",
     verbose: bool = True,
-) -> Dict:
+) -> dict:
     generators = {
         "uniform": generate_uniform_workload,
         "bimodal": generate_bimodal_workload,
@@ -327,7 +326,7 @@ def run_experiment(
 
     if verbose:
         print(f"\n=== Fragmentation Experiment: {workload} workload ===")
-        print(f"\nContiguous Allocator:")
+        print("\nContiguous Allocator:")
         for k, v in contig_result.summary().items():
             print(f"  {k}: {v}")
         print(f"\nBlock Allocator (block_size={block_size}):")
@@ -336,7 +335,7 @@ def run_experiment(
 
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
-    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
+    ts = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S")
     fpath = out_path / f"fragmentation_{workload}_{ts}.json"
     with open(fpath, "w") as f:
         json.dump(results, f, indent=2)

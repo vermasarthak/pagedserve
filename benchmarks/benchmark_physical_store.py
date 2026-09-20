@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """Microbenchmarks for physical KV block storage operations: scatter, gather, token append, and reference attention."""
 
-import time
 import sys
+import time
 from pathlib import Path
+
 import torch
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from pagedserve.memory.geometry import KVCacheGeometry
-from pagedserve.memory.block_pool import BlockPool
-from pagedserve.memory.block_table import BlockTable
-from pagedserve.memory.tensor_block_store import TensorBlockStore
-from pagedserve.memory.scatter_gather import CacheScatterGather
-from pagedserve.memory.paged_view import PagedKVView
-from pagedserve.memory.attention import paged_attention_reference
 from benchmarks.benchmark_utils import synchronize_device
+from pagedserve.memory.attention import paged_attention_reference
+from pagedserve.memory.block_table import BlockTable
+from pagedserve.memory.geometry import KVCacheGeometry
+from pagedserve.memory.paged_view import PagedKVView
+from pagedserve.memory.scatter_gather import CacheScatterGather
+from pagedserve.memory.tensor_block_store import TensorBlockStore
 
 
 def benchmark_physical_store_ops(device_str: str = "cpu", trials: int = 100):

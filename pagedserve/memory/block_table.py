@@ -1,6 +1,6 @@
 """Logical-to-Physical Block Table mapping for individual inference requests."""
 
-from typing import List, Tuple
+
 from pagedserve.errors import InvalidBlockError
 
 
@@ -22,7 +22,7 @@ class BlockTable:
 
     def __init__(self, request_id: str):
         self._request_id: str = request_id
-        self._physical_blocks: List[int] = []
+        self._physical_blocks: list[int] = []
 
     @property
     def request_id(self) -> str:
@@ -35,12 +35,12 @@ class BlockTable:
         return len(self._physical_blocks)
 
     @property
-    def blocks(self) -> List[int]:
+    def blocks(self) -> list[int]:
         """A copy of the ordered physical block IDs mapped to this sequence."""
         return list(self._physical_blocks)
 
     @property
-    def logical_indices(self) -> List[int]:
+    def logical_indices(self) -> list[int]:
         """Logical block indices [0, 1, ..., num_blocks - 1]."""
         return list(range(len(self._physical_blocks)))
 
@@ -65,7 +65,7 @@ class BlockTable:
 
     def get_physical_block_and_offset(
         self, token_index: int, block_size: int
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         """Given a zero-indexed token position in the sequence, return (physical_block_id, offset_in_block).
         
         Args:
@@ -90,7 +90,7 @@ class BlockTable:
         """Check if this block table currently maps the specified physical block ID."""
         return physical_block_id in self._physical_blocks
 
-    def clear(self) -> List[int]:
+    def clear(self) -> list[int]:
         """Clear all block mappings and return the physical block IDs that were mapped.
         
         The returned block IDs must subsequently be released in the BlockPool by the caller.

@@ -2,20 +2,21 @@
 
 import pytest
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.cache_utils import DynamicCache
 
-from pagedserve.model.loader import ModelLoader
-from pagedserve.memory.geometry import KVCacheGeometry, UnsupportedArchitectureError
+from pagedserve.memory.attention import paged_attention_reference
 from pagedserve.memory.block_pool import BlockPool
 from pagedserve.memory.block_table import BlockTable
-from pagedserve.memory.prefix_cache import PrefixCache
-from pagedserve.memory.tensor_block_store import TensorBlockStore, PhysicalBlockStoreError
-from pagedserve.model.cache_adapter import CacheAdapter
-from pagedserve.memory.scatter_gather import CacheScatterGather
+from pagedserve.memory.geometry import KVCacheGeometry, UnsupportedArchitectureError
 from pagedserve.memory.paged_view import PagedKVView
-from pagedserve.memory.attention import paged_attention_reference
-
+from pagedserve.memory.prefix_cache import PrefixCache
+from pagedserve.memory.scatter_gather import CacheScatterGather
+from pagedserve.memory.tensor_block_store import (
+    PhysicalBlockStoreError,
+    TensorBlockStore,
+)
+from pagedserve.model.cache_adapter import CacheAdapter
+from pagedserve.model.loader import ModelLoader
 
 # -----------------------------------------------------------------------------
 # 1. KV Cache Geometry Tests

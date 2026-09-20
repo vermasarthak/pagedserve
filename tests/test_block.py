@@ -1,8 +1,9 @@
 """Comprehensive unit tests for KVBlock metadata model and invariants."""
 
 import pytest
-from pagedserve.memory.block import KVBlock
+
 from pagedserve.errors import BlockInvariantError, DoubleFreeError
+from pagedserve.memory.block import KVBlock
 
 
 def test_block_initial_state():

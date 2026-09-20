@@ -1,16 +1,23 @@
 """Comprehensive correctness tests for direct blockwise paged attention."""
 
 import math
+
 import pytest
 import torch
 
+from pagedserve.memory.attention import (
+    paged_attention_blockwise,
+    paged_attention_reference,
+)
 from pagedserve.memory.block_pool import BlockPool
 from pagedserve.memory.block_table import BlockTable
 from pagedserve.memory.geometry import KVCacheGeometry
-from pagedserve.memory.tensor_block_store import TensorBlockStore
+from pagedserve.memory.memory_estimator import (
+    compare_sequence_scaling,
+    estimate_attention_memory,
+)
 from pagedserve.memory.paged_view import PagedKVView
-from pagedserve.memory.attention import paged_attention_reference, paged_attention_blockwise
-from pagedserve.memory.memory_estimator import estimate_attention_memory, compare_sequence_scaling
+from pagedserve.memory.tensor_block_store import TensorBlockStore
 
 
 def test_naive_per_block_softmax_fails():

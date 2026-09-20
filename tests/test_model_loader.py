@@ -2,7 +2,8 @@
 
 import pytest
 import torch
-from pagedserve.model.loader import ModelLoader, LoadedModel
+
+from pagedserve.model.loader import LoadedModel, ModelLoader
 
 
 def test_model_loader_cpu(cpu_loaded_model: LoadedModel):

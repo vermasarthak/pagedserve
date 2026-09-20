@@ -1,13 +1,14 @@
 """Exhaustive tests for BlockPool: allocation, exhaustion, double-free, and ref counts."""
 
 import pytest
-from pagedserve.memory.block_pool import BlockPool
+
 from pagedserve.errors import (
-    KVCacheExhaustedError,
-    InvalidBlockError,
-    DoubleFreeError,
     BlockInvariantError,
+    DoubleFreeError,
+    InvalidBlockError,
+    KVCacheExhaustedError,
 )
+from pagedserve.memory.block_pool import BlockPool
 
 
 def test_pool_initialization():

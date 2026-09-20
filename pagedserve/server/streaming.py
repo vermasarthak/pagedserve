@@ -1,6 +1,7 @@
 """Server-Sent Events (SSE) formatting utilities for streaming generation."""
 
 import json
+
 from pagedserve.engine.engine import StreamEvent
 
 

@@ -1,15 +1,16 @@
 """Physical block-backed KV tensor store allocating unified Key and Value storage."""
 
-from typing import Tuple
+
+from typing import Optional
+
 import torch
 
-from pagedserve.memory.geometry import KVCacheGeometry
 from pagedserve.errors import InvalidBlockError, PagedServeError
+from pagedserve.memory.geometry import KVCacheGeometry
 
 
 class PhysicalBlockStoreError(PagedServeError):
     """Raised on invalid physical block store operations or tensor mismatch."""
-    pass
 
 
 class TensorBlockStore:
@@ -77,7 +78,7 @@ class TensorBlockStore:
         return self._geometry.device
 
     @property
-    def shape(self) -> Tuple[int, int, int, int, int]:
+    def shape(self) -> tuple[int, int, int, int, int]:
         """Physical shape of K and V storage buffers [layers, blocks, block_size, kv_heads, head_dim]."""
         return self._k_store.shape
 
@@ -183,7 +184,7 @@ class TensorBlockStore:
 
     def read_token(
         self, layer_idx: int, physical_block_id: int, block_offset: int
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Read single-token Key and Value tensors from a physical block position."""
         self._validate_indices(layer_idx, physical_block_id, block_offset)
         k = self._k_store[layer_idx, physical_block_id, block_offset]
@@ -192,7 +193,7 @@ class TensorBlockStore:
 
     def read_block(
         self, layer_idx: int, physical_block_id: int, num_tokens: Optional[int] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Read a full or partial block of Key and Value tensors."""
         self._validate_indices(layer_idx, physical_block_id)
         n = num_tokens if num_tokens is not None else self._geometry.block_size

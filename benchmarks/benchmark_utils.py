@@ -1,19 +1,17 @@
 """Shared utilities for PagedServe benchmark scripts and device synchronization."""
 
-import json
-import time
-import platform
 import datetime
+import json
+import platform
 import statistics
-import math
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Union
+from typing import Any
 
 import torch
 
 
-def synchronize_device(device: Union[torch.device, str]) -> None:
+def synchronize_device(device: torch.device | str) -> None:
     """Synchronize accelerator execution queue before/after timing sections.
     
     - CUDA: torch.cuda.synchronize()
@@ -34,33 +32,33 @@ def synchronize_device(device: Union[torch.device, str]) -> None:
 class TrialStats:
     """Statistical summary across multiple benchmark trials."""
 
-    values: List[float] = field(default_factory=list)
+    values: list[float] = field(default_factory=list)
 
     @property
     def count(self) -> int:
         return len(self.values)
 
     @property
-    def mean(self) -> Optional[float]:
+    def mean(self) -> float | None:
         return statistics.mean(self.values) if self.values else None
 
     @property
-    def median(self) -> Optional[float]:
+    def median(self) -> float | None:
         return statistics.median(self.values) if self.values else None
 
     @property
-    def stddev(self) -> Optional[float]:
+    def stddev(self) -> float | None:
         return statistics.stdev(self.values) if len(self.values) > 1 else 0.0
 
     @property
-    def min_val(self) -> Optional[float]:
+    def min_val(self) -> float | None:
         return min(self.values) if self.values else None
 
     @property
-    def max_val(self) -> Optional[float]:
+    def max_val(self) -> float | None:
         return max(self.values) if self.values else None
 
-    def percentile(self, p: float) -> Optional[float]:
+    def percentile(self, p: float) -> float | None:
         if not self.values:
             return None
         sorted_vals = sorted(self.values)
@@ -68,7 +66,7 @@ class TrialStats:
         idx = max(0, min(n - 1, int(p * n / 100)))
         return sorted_vals[idx]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         if not self.values:
             return {
                 "count": 0,
@@ -111,13 +109,13 @@ class MultiTrialBenchmarkResult:
     tokens_per_sec_stats: TrialStats = field(default_factory=TrialStats)
     latency_stats: TrialStats = field(default_factory=TrialStats)
     ttft_stats: TrialStats = field(default_factory=TrialStats)
-    hardware: Dict[str, Any] = field(default_factory=dict)
-    raw_trials: List[Dict[str, Any]] = field(default_factory=list)
+    hardware: dict[str, Any] = field(default_factory=dict)
+    raw_trials: list[dict[str, Any]] = field(default_factory=list)
     timestamp: str = field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat()
+        default_factory=lambda: datetime.datetime.now(datetime.UTC).isoformat()
     )
 
-    def summary(self) -> Dict[str, Any]:
+    def summary(self) -> dict[str, Any]:
         return {
             "mode": self.mode,
             "model": self.model,
@@ -139,7 +137,7 @@ class MultiTrialBenchmarkResult:
         }
 
 
-def get_hardware_info() -> Dict[str, Any]:
+def get_hardware_info() -> dict[str, Any]:
     """Collect hardware metadata for reproducible benchmark records."""
     import psutil
 
@@ -167,7 +165,7 @@ def save_multi_trial_result(
     """Save benchmark result as structured JSON."""
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
-    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
+    ts = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S")
     fname = f"{result.mode}_{result.model.replace('/', '_')}_{result.workload}_{result.concurrency}c_{ts}.json"
     fpath = out_path / fname
 
@@ -185,7 +183,7 @@ def generate_exact_token_prompts(
     num_prompts: int,
     target_token_count: int,
     seed: int = 42,
-) -> List[str]:
+) -> list[str]:
     """Generate prompts that tokenize to EXACTLY target_token_count tokens."""
     import random
 
@@ -201,8 +199,8 @@ def generate_exact_token_prompts(
 
     prompts = []
     for _ in range(num_prompts):
-        tokens: List[int] = []
-        words_buf: List[str] = []
+        tokens: list[int] = []
+        words_buf: list[str] = []
         while len(tokens) < target_token_count:
             w = rng.choice(words)
             words_buf.append(w)

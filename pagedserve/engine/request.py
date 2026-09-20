@@ -2,7 +2,6 @@
 
 import time
 from dataclasses import dataclass, field
-from typing import Optional, Set, List
 
 from pagedserve.engine.state import RequestState
 from pagedserve.errors import InvalidRequestError, InvalidRequestStateError
@@ -16,7 +15,7 @@ class SamplingParams:
     top_k: int = 50
     top_p: float = 1.0
     max_new_tokens: int = 64
-    stop_token_ids: Set[int] = field(default_factory=set)
+    stop_token_ids: set[int] = field(default_factory=set)
     repetition_penalty: float = 1.0
 
     def __post_init__(self) -> None:
@@ -40,22 +39,22 @@ class InferenceRequest:
 
     request_id: str
     prompt: str
-    prompt_token_ids: List[int]
+    prompt_token_ids: list[int]
     sampling_params: SamplingParams = field(default_factory=SamplingParams)
     arrival_time: float = field(default_factory=time.monotonic)
 
     # Output tracking
-    generated_token_ids: List[int] = field(default_factory=list)
+    generated_token_ids: list[int] = field(default_factory=list)
 
     # State & lifecycle
     state: RequestState = RequestState.WAITING
     num_prompt_tokens_processed: int = 0
-    finish_reason: Optional[str] = None
-    error_message: Optional[str] = None
+    finish_reason: str | None = None
+    error_message: str | None = None
 
     # Telemetry timestamps (monotonic)
-    first_token_time: Optional[float] = None
-    completion_time: Optional[float] = None
+    first_token_time: float | None = None
+    completion_time: float | None = None
 
     def __post_init__(self) -> None:
         if not self.request_id:
@@ -98,14 +97,14 @@ class InferenceRequest:
         return self.num_prompt_tokens_processed == self.num_prompt_tokens
 
     @property
-    def ttft(self) -> Optional[float]:
+    def ttft(self) -> float | None:
         """Time to First Token (TTFT) in seconds, if first token has been generated."""
         if self.first_token_time is not None:
             return self.first_token_time - self.arrival_time
         return None
 
     @property
-    def total_latency(self) -> Optional[float]:
+    def total_latency(self) -> float | None:
         """Total end-to-end request latency in seconds, if request is completed."""
         if self.completion_time is not None:
             return self.completion_time - self.arrival_time
@@ -149,7 +148,7 @@ class InferenceRequest:
             )
         self.state = RequestState.DECODING
 
-    def append_generated_token(self, token_id: int, timestamp: Optional[float] = None) -> None:
+    def append_generated_token(self, token_id: int, timestamp: float | None = None) -> None:
         """Append a newly sampled token during decode or prefill final step."""
         if self.state not in (RequestState.PREFILL, RequestState.DECODING):
             raise InvalidRequestStateError(
@@ -168,7 +167,7 @@ class InferenceRequest:
         elif self.num_generated_tokens >= self.sampling_params.max_new_tokens:
             self.mark_finished(reason="length", timestamp=now)
 
-    def mark_finished(self, reason: str = "stop", timestamp: Optional[float] = None) -> None:
+    def mark_finished(self, reason: str = "stop", timestamp: float | None = None) -> None:
         """Mark the request as successfully finished."""
         if self.state.is_terminal:
             raise InvalidRequestStateError(
@@ -178,7 +177,7 @@ class InferenceRequest:
         self.finish_reason = reason
         self.completion_time = timestamp if timestamp is not None else time.monotonic()
 
-    def mark_cancelled(self, timestamp: Optional[float] = None) -> None:
+    def mark_cancelled(self, timestamp: float | None = None) -> None:
         """Mark the request as cancelled by caller or client disconnect."""
         if self.state.is_terminal:
             raise InvalidRequestStateError(
@@ -188,7 +187,7 @@ class InferenceRequest:
         self.finish_reason = "cancelled"
         self.completion_time = timestamp if timestamp is not None else time.monotonic()
 
-    def mark_failed(self, error: str, timestamp: Optional[float] = None) -> None:
+    def mark_failed(self, error: str, timestamp: float | None = None) -> None:
         """Mark the request as failed due to runtime error or OOM."""
         if self.state.is_terminal:
             raise InvalidRequestStateError(

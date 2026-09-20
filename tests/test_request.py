@@ -1,8 +1,9 @@
 """Comprehensive tests for Request, RequestState, SamplingParams, and state transitions."""
 
 import pytest
-from pagedserve.engine.state import RequestState
+
 from pagedserve.engine.request import InferenceRequest, SamplingParams
+from pagedserve.engine.state import RequestState
 from pagedserve.errors import InvalidRequestError, InvalidRequestStateError
 
 

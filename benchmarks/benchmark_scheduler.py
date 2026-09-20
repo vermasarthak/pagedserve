@@ -9,29 +9,29 @@ Workload Profiles:
 """
 
 import argparse
-import time
-import sys
 import json
+import sys
+import time
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from pagedserve.model.loader import ModelLoader
-from pagedserve.engine.request import SamplingParams
-from pagedserve.config import EngineConfig
-from pagedserve.memory.kv_cache import KVCacheManager
-from pagedserve.scheduler.policy import FCFSPolicy, MemoryAwarePolicy
-from pagedserve.scheduler.scheduler import Scheduler
-from pagedserve.engine.engine import PagedServeEngine
 from benchmarks.benchmark_utils import (
     MultiTrialBenchmarkResult,
     TrialStats,
+    generate_exact_token_prompts,
     get_hardware_info,
     save_multi_trial_result,
-    generate_exact_token_prompts,
     synchronize_device,
 )
+from pagedserve.config import EngineConfig
+from pagedserve.engine.engine import PagedServeEngine
+from pagedserve.engine.request import SamplingParams
+from pagedserve.memory.kv_cache import KVCacheManager
+from pagedserve.model.loader import ModelLoader
+from pagedserve.scheduler.policy import FCFSPolicy, MemoryAwarePolicy
+from pagedserve.scheduler.scheduler import Scheduler
 
 
 def run_scheduler_trial(loaded_model, prompts, output_tokens, config, policy, policy_name):
@@ -95,13 +95,13 @@ def run_scheduler_trial(loaded_model, prompts, output_tokens, config, policy, po
 def audit_policy_comparison(
     loaded_model,
     workload_name: str,
-    prompts: List[str],
+    prompts: list[str],
     output_tokens: int,
     config: EngineConfig,
     trials: int = 5,
     warmup_runs: int = 2,
     output_dir: str = "benchmarks/results",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     hardware = get_hardware_info()
     print(f"\n--- AUDITING WORKLOAD: {workload_name} ({len(prompts)} prompts, num_blocks={config.num_blocks}) ---")
 

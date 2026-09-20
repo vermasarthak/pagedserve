@@ -21,25 +21,25 @@ python benchmarks/benchmark_throughput.py --model TinyLlama/TinyLlama-1.1B-Chat-
 """
 
 import argparse
-import time
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from pagedserve.model.loader import ModelLoader
-from pagedserve.engine.request import SamplingParams
-from pagedserve.config import EngineConfig
-from pagedserve.engine.engine import PagedServeEngine
-from pagedserve.baseline.sequential import SequentialBaseline
 from benchmarks.benchmark_utils import (
     MultiTrialBenchmarkResult,
     TrialStats,
+    generate_exact_token_prompts,
     get_hardware_info,
     save_multi_trial_result,
-    generate_exact_token_prompts,
     synchronize_device,
 )
+from pagedserve.baseline.sequential import SequentialBaseline
+from pagedserve.config import EngineConfig
+from pagedserve.engine.engine import PagedServeEngine
+from pagedserve.engine.request import SamplingParams
+from pagedserve.model.loader import ModelLoader
 
 # ---------------------------------------------------------------------------
 # Model presets — override defaults for large models that need more blocks
@@ -295,7 +295,7 @@ def main():
         seq_mean_req = sum(seq_req_rates) / len(seq_req_rates)
         seq_mean_tok = sum(seq_tok_rates) / len(seq_tok_rates)
         seq_mean_lat = (sum(seq_latencies) / len(seq_latencies)) if seq_latencies else float("nan")
-        print(f"Sequential baseline:")
+        print("Sequential baseline:")
         print(f"  requests/sec:       {seq_mean_req:.2f}")
         print(f"  output tokens/sec:  {seq_mean_tok:.2f}")
         print(f"  mean latency (s):   {seq_mean_lat:.3f}")

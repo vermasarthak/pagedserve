@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Optional, TYPE_CHECKING
+
+from typing import TYPE_CHECKING
+
 import torch
 
 if TYPE_CHECKING:
@@ -13,7 +15,7 @@ class Sampler:
     def sample(
         logits: torch.Tensor,
         sampling_params: SamplingParams,
-        generator: Optional[torch.Generator] = None,
+        generator: torch.Generator | None = None,
     ) -> int:
         """Sample the next token ID from a 1D or (1, V) logits tensor.
         

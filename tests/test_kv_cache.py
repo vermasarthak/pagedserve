@@ -1,9 +1,10 @@
 """Exhaustive tests for KVCacheManager: prompt allocation, boundary crossing, and resource cleanup."""
 
 import pytest
-from pagedserve.memory.kv_cache import KVCacheManager
+
+from pagedserve.errors import KVCacheExhaustedError
 from pagedserve.memory.block_table import BlockTable
-from pagedserve.errors import KVCacheExhaustedError, InvalidRequestError
+from pagedserve.memory.kv_cache import KVCacheManager
 
 
 def test_kv_cache_prompt_allocation():

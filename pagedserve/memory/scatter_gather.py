@@ -1,10 +1,13 @@
 """Scatter and Gather operations for non-contiguous physical KV block storage."""
 
-from typing import List, Tuple
+
 import torch
 
 from pagedserve.memory.block_table import BlockTable
-from pagedserve.memory.tensor_block_store import TensorBlockStore, PhysicalBlockStoreError
+from pagedserve.memory.tensor_block_store import (
+    PhysicalBlockStoreError,
+    TensorBlockStore,
+)
 
 
 class CacheScatterGather:
@@ -65,7 +68,7 @@ class CacheScatterGather:
     def scatter_sequence_all_layers(
         self,
         block_table: BlockTable,
-        layer_kv_pairs: List[Tuple[torch.Tensor, torch.Tensor]],
+        layer_kv_pairs: list[tuple[torch.Tensor, torch.Tensor]],
     ) -> None:
         """Scatter canonical Key and Value tensors for all layers into physical blocks."""
         if len(layer_kv_pairs) != self.geometry.num_layers:
@@ -81,7 +84,7 @@ class CacheScatterGather:
         layer_idx: int,
         block_table: BlockTable,
         seq_length: int,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Gather non-contiguous physical blocks into a single contiguous logical sequence for one layer.
         
         Args:
@@ -134,7 +137,7 @@ class CacheScatterGather:
         self,
         block_table: BlockTable,
         seq_length: int,
-    ) -> List[Tuple[torch.Tensor, torch.Tensor]]:
+    ) -> list[tuple[torch.Tensor, torch.Tensor]]:
         """Gather non-contiguous physical blocks into logical sequences across all layers."""
         layers = []
         for layer_idx in range(self.geometry.num_layers):

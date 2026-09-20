@@ -1,14 +1,12 @@
 """Continuous batching scheduler managing request queues, prefill/decode budgets, and chunking."""
 
-from typing import Dict, List, Optional
-from collections import deque
 
 from pagedserve.engine.request import InferenceRequest
 from pagedserve.engine.state import RequestState
-from pagedserve.memory.kv_cache import KVCacheManager
-from pagedserve.scheduler.batch import WorkType, ScheduledItem, SchedulerBatch
-from pagedserve.scheduler.policy import SchedulingPolicy, FCFSPolicy
 from pagedserve.errors import InvalidRequestError, InvalidRequestStateError
+from pagedserve.memory.kv_cache import KVCacheManager
+from pagedserve.scheduler.batch import ScheduledItem, SchedulerBatch, WorkType
+from pagedserve.scheduler.policy import FCFSPolicy, SchedulingPolicy
 
 
 class Scheduler:
@@ -34,7 +32,7 @@ class Scheduler:
         max_batch_tokens: int = 2048,
         max_prefill_tokens: int = 512,
         prefill_chunk_size: int = 512,
-        policy: Optional[SchedulingPolicy] = None,
+        policy: SchedulingPolicy | None = None,
     ):
         if max_num_sequences <= 0:
             raise ValueError(f"max_num_sequences must be positive, got {max_num_sequences}")
@@ -53,11 +51,11 @@ class Scheduler:
         self.policy: SchedulingPolicy = policy if policy is not None else FCFSPolicy()
 
         # Request state queues
-        self._waiting: List[InferenceRequest] = []
-        self._running: Dict[str, InferenceRequest] = {}
-        self._completed: List[InferenceRequest] = []
-        self._cancelled: List[InferenceRequest] = []
-        self._failed: List[InferenceRequest] = []
+        self._waiting: list[InferenceRequest] = []
+        self._running: dict[str, InferenceRequest] = {}
+        self._completed: list[InferenceRequest] = []
+        self._cancelled: list[InferenceRequest] = []
+        self._failed: list[InferenceRequest] = []
 
     # --- Queue Telemetry ---
 
@@ -82,15 +80,15 @@ class Scheduler:
         return len(self._failed)
 
     @property
-    def waiting_requests(self) -> List[InferenceRequest]:
+    def waiting_requests(self) -> list[InferenceRequest]:
         return list(self._waiting)
 
     @property
-    def running_requests(self) -> Dict[str, InferenceRequest]:
+    def running_requests(self) -> dict[str, InferenceRequest]:
         return dict(self._running)
 
     @property
-    def completed_requests(self) -> List[InferenceRequest]:
+    def completed_requests(self) -> list[InferenceRequest]:
         return list(self._completed)
 
     # --- Request Enqueue & Cancellation ---
@@ -176,7 +174,7 @@ class Scheduler:
             elif req.state == RequestState.FAILED:
                 self._failed.append(req)
 
-        scheduled_items: List[ScheduledItem] = []
+        scheduled_items: list[ScheduledItem] = []
         batch_token_budget = self.max_batch_tokens
         prefill_token_budget = min(self.max_prefill_tokens, self.max_batch_tokens)
 

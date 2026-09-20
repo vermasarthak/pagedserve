@@ -1,13 +1,13 @@
 """High-level Key-Value Cache Manager orchestrating BlockPool and Request BlockTables."""
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Dict, List, Optional
 
+from pagedserve.errors import InvalidRequestError
 from pagedserve.memory.block_pool import BlockPool
 from pagedserve.memory.block_table import BlockTable
 from pagedserve.memory.prefix_cache import PrefixCache, compute_prefix_block_hash
-from pagedserve.errors import KVCacheExhaustedError, InvalidRequestError
 
 
 @dataclass(frozen=True)
@@ -45,16 +45,16 @@ class KVCacheManager:
     ):
         self._block_size: int = block_size
         self._pool: BlockPool = BlockPool(num_blocks=num_blocks, block_size=block_size)
-        self._tables: Dict[str, BlockTable] = {}
+        self._tables: dict[str, BlockTable] = {}
         self._enable_prefix_caching: bool = enable_prefix_caching
-        self._prefix_cache: Optional[PrefixCache] = (
+        self._prefix_cache: PrefixCache | None = (
             PrefixCache(pool=self._pool, max_cached_blocks=max_prefix_cached_blocks)
             if enable_prefix_caching
             else None
         )
 
     @property
-    def prefix_cache(self) -> Optional[PrefixCache]:
+    def prefix_cache(self) -> PrefixCache | None:
         """The attached PrefixCache instance, if enabled."""
         return self._prefix_cache
 
@@ -89,7 +89,7 @@ class KVCacheManager:
         return len(self._tables)
 
     @property
-    def blocks_by_request(self) -> Dict[str, List[int]]:
+    def blocks_by_request(self) -> dict[str, list[int]]:
         """Mapping from request_id to list of allocated physical block IDs."""
         return {req_id: table.blocks for req_id, table in self._tables.items()}
 
@@ -212,7 +212,7 @@ class KVCacheManager:
             return self.allocate_for_prompt(request_id, len(prompt_token_ids))
 
         # Atomic allocation with rollback on failure
-        allocated_in_call: List[int] = []
+        allocated_in_call: list[int] = []
         table = BlockTable(request_id=request_id)
         prev_hash = ""
         num_full_blocks = len(prompt_token_ids) // self._block_size
@@ -259,7 +259,7 @@ class KVCacheManager:
                     pass
             raise
 
-    def append_token(self, request_id: str, current_total_len: int) -> Optional[int]:
+    def append_token(self, request_id: str, current_total_len: int) -> int | None:
         """Record the generation of a new token for an existing sequence.
         
         If sequence length exceeds currently mapped block capacity, allocates

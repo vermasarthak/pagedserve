@@ -1,4 +1,3 @@
-import pytest
 from pagedserve.config import EngineConfig
 from pagedserve.engine.engine import PagedServeEngine
 from pagedserve.engine.request import SamplingParams

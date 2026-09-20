@@ -2,21 +2,19 @@
 
 import queue
 import uuid
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Iterator
-import torch
 
 from pagedserve.config import EngineConfig
 from pagedserve.engine.request import InferenceRequest, SamplingParams
-from pagedserve.engine.state import RequestState
+from pagedserve.errors import InvalidRequestError
 from pagedserve.memory.kv_cache import KVCacheManager
 from pagedserve.metrics import EngineMetrics
-from pagedserve.model.loader import ModelLoader, LoadedModel
+from pagedserve.model.loader import LoadedModel, ModelLoader
 from pagedserve.model.runner import ModelRunner, ModelSequenceState
 from pagedserve.model.sampler import Sampler
-from pagedserve.scheduler.batch import WorkType, SchedulerBatch
+from pagedserve.scheduler.batch import SchedulerBatch
 from pagedserve.scheduler.scheduler import Scheduler
-from pagedserve.errors import InvalidRequestError, PagedServeError
 
 
 @dataclass
@@ -28,7 +26,7 @@ class StreamEvent:
     text_delta: str
     generated_tokens: int
     finished: bool
-    finish_reason: Optional[str] = None
+    finish_reason: str | None = None
 
 
 @dataclass
@@ -36,8 +34,8 @@ class EngineStepOutput:
     """Output produced by a single engine execution step."""
 
     batch: SchedulerBatch
-    generated_tokens: Dict[str, int] = field(default_factory=dict)
-    finished_requests: List[str] = field(default_factory=list)
+    generated_tokens: dict[str, int] = field(default_factory=dict)
+    finished_requests: list[str] = field(default_factory=list)
 
     @property
     def is_empty(self) -> bool:
@@ -49,10 +47,10 @@ class PagedServeEngine:
 
     def __init__(
         self,
-        config: Optional[EngineConfig] = None,
-        loaded_model: Optional[LoadedModel] = None,
-        scheduler: Optional[Scheduler] = None,
-        kv_cache_mgr: Optional[KVCacheManager] = None,
+        config: EngineConfig | None = None,
+        loaded_model: LoadedModel | None = None,
+        scheduler: Scheduler | None = None,
+        kv_cache_mgr: KVCacheManager | None = None,
     ):
         self.config: EngineConfig = config if config is not None else EngineConfig()
 
@@ -96,11 +94,11 @@ class PagedServeEngine:
         self.sampler: Sampler = Sampler()
 
         # 5. Engine State Tracking
-        self._requests: Dict[str, InferenceRequest] = {}
-        self._model_states: Dict[str, ModelSequenceState] = {}
+        self._requests: dict[str, InferenceRequest] = {}
+        self._model_states: dict[str, ModelSequenceState] = {}
 
         # 6. Streaming and Telemetry
-        self._stream_queues: Dict[str, queue.Queue] = {}
+        self._stream_queues: dict[str, queue.Queue] = {}
         self.metrics: EngineMetrics = EngineMetrics()
         self.metrics.kv_blocks_total = self.kv_cache_mgr.total_blocks
 
@@ -117,8 +115,8 @@ class PagedServeEngine:
     def submit(
         self,
         prompt: str,
-        sampling_params: Optional[SamplingParams] = None,
-        request_id: Optional[str] = None,
+        sampling_params: SamplingParams | None = None,
+        request_id: str | None = None,
     ) -> str:
         """Tokenize a prompt and enqueue an inference request for continuous scheduling."""
         if not prompt:
@@ -160,7 +158,7 @@ class PagedServeEngine:
 
         return cancelled
 
-    def get_request(self, request_id: str) -> Optional[InferenceRequest]:
+    def get_request(self, request_id: str) -> InferenceRequest | None:
         """Retrieve request metadata and execution state."""
         return self._requests.get(request_id)
 

@@ -1,8 +1,9 @@
 """Exhaustive tests for BlockTable logical-to-physical block mapping."""
 
 import pytest
-from pagedserve.memory.block_table import BlockTable
+
 from pagedserve.errors import InvalidBlockError
+from pagedserve.memory.block_table import BlockTable
 
 
 def test_block_table_initial_state():

@@ -1,10 +1,10 @@
-from typing import Optional, List
+
 import torch
 from transformers.cache_utils import DynamicCache
 
+from pagedserve.engine.request import SamplingParams
 from pagedserve.model.loader import LoadedModel
 from pagedserve.model.sampler import Sampler
-from pagedserve.engine.request import SamplingParams
 
 
 class SequentialBaseline:
@@ -22,10 +22,10 @@ class SequentialBaseline:
 
     def generate(
         self,
-        prompt_tokens: List[int],
+        prompt_tokens: list[int],
         sampling_params: SamplingParams,
-        seed: Optional[int] = None,
-    ) -> List[int]:
+        seed: int | None = None,
+    ) -> list[int]:
         """Generate output tokens for a single prompt sequentially.
         
         Args:

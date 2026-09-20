@@ -4,13 +4,12 @@ import ctypes
 import ctypes.util
 import math
 import os
-from typing import Optional, Dict
+
 import torch
 
 from pagedserve.kernels.backend import PagedAttentionBackend
 from pagedserve.kernels.pytorch_backend import PyTorchPagedAttentionBackend
 from pagedserve.memory.paged_view import PagedKVView
-
 
 # Objective-C / Metal framework initialization
 _objc = None
@@ -20,9 +19,11 @@ _metal_device = None
 _metal_available = False
 
 try:
-    _objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
-    _metal = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/Metal.framework/Metal")
-    _foundation = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/Foundation.framework/Foundation")
+    _objc_path = ctypes.util.find_library("objc")
+    if _objc_path is not None:
+        _objc = ctypes.cdll.LoadLibrary(_objc_path)
+        _metal = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/Metal.framework/Metal")
+        _foundation = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/Foundation.framework/Foundation")
 
     _objc.objc_getClass.restype = ctypes.c_void_p
     _objc.objc_getClass.argtypes = [ctypes.c_char_p]
@@ -83,13 +84,13 @@ class MetalPagedAttentionBackend(PagedAttentionBackend):
 
     def __init__(self):
         self._fallback = PyTorchPagedAttentionBackend()
-        self._pipeline_cache: Dict[str, ctypes.c_void_p] = {}
+        self._pipeline_cache: dict[str, ctypes.c_void_p] = {}
         self._cmd_queue = None
 
         if _metal_available and _metal_device:
             self._cmd_queue = _msg(_metal_device, "newCommandQueue", ctypes.c_void_p, [])
 
-    def _get_pipeline(self) -> Optional[ctypes.c_void_p]:
+    def _get_pipeline(self) -> ctypes.c_void_p | None:
         """Compile and cache the MSL compute shader pipeline."""
         if not _metal_available or not _metal_device:
             return None
@@ -141,7 +142,7 @@ class MetalPagedAttentionBackend(PagedAttentionBackend):
         query: torch.Tensor,
         paged_view: PagedKVView,
         layer_idx: int,
-        scale: Optional[float] = None,
+        scale: float | None = None,
     ) -> torch.Tensor:
         """Execute single-token decode paged attention on GPU using custom Metal kernel.
         

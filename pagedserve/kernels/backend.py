@@ -1,8 +1,9 @@
 """Abstract base class interface for PagedAttention execution backends."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
+
 import torch
+
 from pagedserve.memory.paged_view import PagedKVView
 
 
@@ -15,7 +16,7 @@ class PagedAttentionBackend(ABC):
         query: torch.Tensor,
         paged_view: PagedKVView,
         layer_idx: int,
-        scale: Optional[float] = None,
+        scale: float | None = None,
     ) -> torch.Tensor:
         """Execute paged attention for a single request query.
         
@@ -28,4 +29,3 @@ class PagedAttentionBackend(ABC):
         Returns:
             Attention output tensor of shape [batch=1, num_attention_heads, query_seq_len, head_dim]
         """
-        pass

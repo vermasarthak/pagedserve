@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pagedserve"
 version = "0.1.0"
-description = "An original experimental LLM inference runtime demonstrating block-based KV caching, continuous batching, chunked prefill, and prefix caching."
+description = "An experimental LLM inference runtime demonstrating block-based KV caching, continuous batching, chunked prefill, and prefix caching."
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "Apache-2.0"}
+license = {text = "MIT"}
 authors = [
-    {name = "PagedServe Team"}
+    {name = "Sarthak Verma", email = "sarthakverma0802@gmail.com"}
 ]
 dependencies = [
     "torch>=2.0.0",
@@ -27,6 +27,8 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
+    "ruff>=0.4.0",
+    "pyright>=1.1.350",
 ]
 
 [tool.pytest.ini_options]

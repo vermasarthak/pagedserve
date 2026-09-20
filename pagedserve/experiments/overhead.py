@@ -7,28 +7,26 @@ Measures:
 """
 
 import argparse
-import time
-import sys
 import json
 import statistics
+import sys
+import time
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-import torch
 
+from benchmarks.benchmark_utils import get_hardware_info, synchronize_device
 from pagedserve.config import EngineConfig
 from pagedserve.engine.engine import PagedServeEngine
-from pagedserve.engine.request import SamplingParams, InferenceRequest
+from pagedserve.engine.request import InferenceRequest, SamplingParams
 from pagedserve.memory.kv_cache import KVCacheManager
 from pagedserve.model.loader import ModelLoader
-from pagedserve.scheduler.policy import FCFSPolicy
 from pagedserve.scheduler.scheduler import Scheduler
-from benchmarks.benchmark_utils import synchronize_device, get_hardware_info
 
 
-def measure_pure_scheduler_overhead(num_requests: int = 50, num_steps: int = 100) -> Dict[str, float]:
+def measure_pure_scheduler_overhead(num_requests: int = 50, num_steps: int = 100) -> dict[str, float]:
     """Measure raw Scheduler.schedule() iteration cost without PyTorch model execution."""
     config = EngineConfig(num_blocks=1024, max_num_sequences=64)
     kv_cache = KVCacheManager(block_size=16, num_blocks=1024)
@@ -63,7 +61,7 @@ def measure_pure_scheduler_overhead(num_requests: int = 50, num_steps: int = 100
     }
 
 
-def measure_engine_breakdown(model_name: str = "sshleifer/tiny-gpt2", device_str: str = "cpu", num_requests: int = 10) -> Dict[str, Any]:
+def measure_engine_breakdown(model_name: str = "sshleifer/tiny-gpt2", device_str: str = "cpu", num_requests: int = 10) -> dict[str, Any]:
     """Break down step latency into model execution vs orchestration overhead."""
     loaded = ModelLoader.load(model_name, device=device_str)
     config = EngineConfig(model_name_or_path=model_name, num_blocks=256)
