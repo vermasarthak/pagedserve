@@ -6,6 +6,18 @@ Includes:
 - Device synchronization before/after timed blocks
 - Exact token prompt generation (validated via tokenizer)
 - Statistical summaries (mean, median, stddev, min, max, percentiles)
+- TinyLlama-1.1B support via --model or --run-tinyllama
+
+Usage examples
+--------------
+# Default (sshleifer/tiny-gpt2, fast, ~1 MB model):
+python benchmarks/benchmark_throughput.py
+
+# TinyLlama-1.1B (~2.2 GB, requires ~6 GB RAM):
+python benchmarks/benchmark_throughput.py --run-tinyllama
+
+# Explicit model:
+python benchmarks/benchmark_throughput.py --model TinyLlama/TinyLlama-1.1B-Chat-v1.0
 """
 
 import argparse
@@ -29,6 +41,22 @@ from benchmarks.benchmark_utils import (
     synchronize_device,
 )
 
+# ---------------------------------------------------------------------------
+# Model presets — override defaults for large models that need more blocks
+# ---------------------------------------------------------------------------
+MODEL_PRESETS = {
+    "TinyLlama/TinyLlama-1.1B-Chat-v1.0": {
+        "num_blocks": 512,
+        "concurrency": 4,
+        "prompt_tokens": 64,
+        "output_tokens": 32,
+        "num_requests": 8,
+        "warmup_runs": 1,
+        "trials": 3,
+        "dtype": "float32",
+    },
+}
+
 
 def run_sequential_baseline_trial(loaded_model, prompts, output_tokens, seed=42):
     baseline = SequentialBaseline(loaded_model)
@@ -39,7 +67,7 @@ def run_sequential_baseline_trial(loaded_model, prompts, output_tokens, seed=42)
 
     tokenizer = loaded_model.tokenizer
     latencies = []
-    
+
     synchronize_device(loaded_model.device)
     t0 = time.monotonic()
 
@@ -94,7 +122,11 @@ def run_pagedserve_trial(loaded_model, prompts, output_tokens, config):
 
 def main():
     parser = argparse.ArgumentParser(description="PagedServe Throughput Benchmark")
-    parser.add_argument("--model", default="sshleifer/tiny-gpt2")
+    parser.add_argument("--model", default="sshleifer/tiny-gpt2",
+                        help="HuggingFace model name or path (default: sshleifer/tiny-gpt2)")
+    parser.add_argument("--run-tinyllama", action="store_true",
+                        help="Shortcut: benchmark TinyLlama/TinyLlama-1.1B-Chat-v1.0 "
+                             "with tuned defaults (~2.2 GB download, ~6 GB RAM required)")
     parser.add_argument("--num-requests", type=int, default=16)
     parser.add_argument("--prompt-tokens", type=int, default=32)
     parser.add_argument("--output-tokens", type=int, default=16)
@@ -108,9 +140,34 @@ def main():
     parser.add_argument("--output-dir", default="benchmarks/results")
     args = parser.parse_args()
 
+    # Apply --run-tinyllama shortcut
+    if args.run_tinyllama:
+        args.model = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+
+    # Apply model-specific preset overrides (only for defaults not explicitly set)
+    preset = MODEL_PRESETS.get(args.model, {})
+    if preset:
+        print(f"[benchmark_throughput] Applying preset overrides for {args.model}")
+        # Only override if the user did not set the flag explicitly (check against defaults)
+        if args.num_blocks == 256 and "num_blocks" in preset:
+            args.num_blocks = preset["num_blocks"]
+        if args.concurrency == 8 and "concurrency" in preset:
+            args.concurrency = preset["concurrency"]
+        if args.prompt_tokens == 32 and "prompt_tokens" in preset:
+            args.prompt_tokens = preset["prompt_tokens"]
+        if args.output_tokens == 16 and "output_tokens" in preset:
+            args.output_tokens = preset["output_tokens"]
+        if args.num_requests == 16 and "num_requests" in preset:
+            args.num_requests = preset["num_requests"]
+        if args.warmup_runs == 2 and "warmup_runs" in preset:
+            args.warmup_runs = preset["warmup_runs"]
+        if args.trials == 5 and "trials" in preset:
+            args.trials = preset["trials"]
+
     hardware = get_hardware_info()
     print(f"[benchmark_throughput] Loading model: {args.model}")
-    loaded = ModelLoader.load(args.model, device=args.device, dtype="float32")
+    dtype = preset.get("dtype", "float32") if preset else "float32"
+    loaded = ModelLoader.load(args.model, device=args.device, dtype=dtype)
     print(f"[benchmark_throughput] Device: {loaded.device}, Dtype: {loaded.dtype}")
 
     prompts = generate_exact_token_prompts(
@@ -222,6 +279,29 @@ def main():
             raw_trials=seq_raw,
         )
         save_multi_trial_result(seq_result, args.output_dir)
+
+    # ---- Summary ----
+    print("\n" + "=" * 70)
+    print(f"BENCHMARK SUMMARY  model={args.model}  device={loaded.device}")
+    print("=" * 70)
+    ps_mean_req = sum(ps_req_rates) / len(ps_req_rates)
+    ps_mean_tok = sum(ps_tok_rates) / len(ps_tok_rates)
+    ps_mean_lat = (sum(ps_latencies) / len(ps_latencies)) if ps_latencies else float("nan")
+    print(f"PagedServe (continuous batching, c={args.concurrency}):")
+    print(f"  requests/sec:       {ps_mean_req:.2f}")
+    print(f"  output tokens/sec:  {ps_mean_tok:.2f}")
+    print(f"  mean latency (s):   {ps_mean_lat:.3f}")
+    if not args.skip_baseline and seq_req_rates:
+        seq_mean_req = sum(seq_req_rates) / len(seq_req_rates)
+        seq_mean_tok = sum(seq_tok_rates) / len(seq_tok_rates)
+        seq_mean_lat = (sum(seq_latencies) / len(seq_latencies)) if seq_latencies else float("nan")
+        print(f"Sequential baseline:")
+        print(f"  requests/sec:       {seq_mean_req:.2f}")
+        print(f"  output tokens/sec:  {seq_mean_tok:.2f}")
+        print(f"  mean latency (s):   {seq_mean_lat:.3f}")
+        speedup = ps_mean_tok / seq_mean_tok if seq_mean_tok > 0 else float("nan")
+        print(f"Throughput improvement: {speedup:.2f}×")
+    print("=" * 70)
 
 
 if __name__ == "__main__":

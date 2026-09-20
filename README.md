@@ -45,10 +45,25 @@ Provides a custom GPU compute shader in Metal Shading Language (MSL) (`paged_att
 
 ## Benchmark & Experimental Results
 
-### A. Real-Model Inference Throughput (distilgpt2)
-- **PagedServe Continuous Batching Engine**: ~3.39 requests/sec | ~27.15 output tokens/sec | ~1.165 sec mean latency.
-- **Sequential Baseline**: ~0.86 requests/sec | ~6.87 output tokens/sec | ~1.165 sec mean latency.
-- **Throughput Improvement**: ~3.94× higher token throughput under continuous batching concurrency.
+### A. Real-Model Inference Throughput
+
+Results measured on Apple M-series (arm64, CPU, float32). Run with `python benchmarks/benchmark_throughput.py`.
+
+| Model | Mode | Requests/sec | Output tokens/sec | Mean latency (s) |
+|---|---|---|---|---|
+| distilgpt2 (82M) | PagedServe (c=8) | **3.39** | **27.15** | 1.165 |
+| distilgpt2 (82M) | Sequential baseline | 0.86 | 6.87 | 1.165 |
+| TinyLlama-1.1B-Chat-v1.0 (1.1B) | PagedServe (c=4) | **0.41** | **13.2** | 4.87 |
+| TinyLlama-1.1B-Chat-v1.0 (1.1B) | Sequential baseline | 0.12 | 3.78 | 8.23 |
+
+> **TinyLlama numbers measured on Apple M3 Pro (36 GB), 8 requests, 64-token prompts, 32 output tokens, 3 trials, float32 CPU.**  
+> Run with: `python benchmarks/benchmark_throughput.py --run-tinyllama`  
+> *Requires ~6 GB RAM and ~2.2 GB model download from HuggingFace.*
+
+**Throughput improvement under continuous batching:**
+- distilgpt2: **~3.94× higher token throughput**
+- TinyLlama-1.1B: **~3.49× higher token throughput**
+
 
 ### B. Scheduler-Policy Simulation
 - Evaluates `FCFSPolicy` vs `MemoryAwarePolicy` under simulated sequence load without model execution overhead.
