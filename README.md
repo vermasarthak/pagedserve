@@ -211,3 +211,5 @@ tests/                 # 283 unit and integration tests
 PagedServe is an original, independent educational codebase built from scratch for learning and research purposes.
 
 <!-- Architecture metric sync for pagedserve -->
+
+<!-- Benchmark metric log for pagedserve -->
