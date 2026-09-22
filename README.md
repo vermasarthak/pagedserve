@@ -209,17 +209,3 @@ tests/                 # 283 unit and integration tests
 - **Apple Metal & PyTorch MPS**: Apple Metal Shading Language (MSL) and PyTorch MPS backend.
 
 PagedServe is an original, independent educational codebase built from scratch for learning and research purposes.
-
-<!-- Architecture metric sync for pagedserve -->
-
-<!-- Benchmark metric log for pagedserve -->
-
-<!-- Audit patch 4 -->
-
-<!-- Audit patch 9 -->
-
-<!-- Audit patch 14 -->
-
-<!-- Audit patch 19 -->
-
-<!-- Audit patch 24 -->
