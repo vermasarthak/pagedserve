@@ -28,7 +28,7 @@ from pagedserve.scheduler.scheduler import Scheduler
 
 def measure_pure_scheduler_overhead(num_requests: int = 50, num_steps: int = 100) -> dict[str, float]:
     """Measure raw Scheduler.schedule() iteration cost without PyTorch model execution."""
-    config = EngineConfig(num_blocks=1024, max_num_sequences=64)
+    EngineConfig(num_blocks=1024, max_num_sequences=64)
     kv_cache = KVCacheManager(block_size=16, num_blocks=1024)
     scheduler = Scheduler(kv_cache_mgr=kv_cache, max_num_sequences=64)
 

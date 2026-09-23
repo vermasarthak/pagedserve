@@ -186,7 +186,7 @@ def test_real_hf_model_cache_import_export_round_trip():
 
     with torch.inference_mode():
         outputs = loaded.model(**inputs, use_cache=True)
-    
+
     hf_cache = outputs.past_key_values
     assert isinstance(hf_cache, DynamicCache)
 

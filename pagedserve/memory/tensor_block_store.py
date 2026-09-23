@@ -1,7 +1,6 @@
 """Physical block-backed KV tensor store allocating unified Key and Value storage."""
 
 
-from typing import Optional
 
 import torch
 
@@ -15,17 +14,17 @@ class PhysicalBlockStoreError(PagedServeError):
 
 class TensorBlockStore:
     """Manages pre-allocated physical PyTorch tensors for Key and Value block storage.
-    
+
     Layout Rationale & Dimensions:
     Shape for K & V tensors:
         [num_layers, num_blocks, block_size, num_kv_heads, head_dim]
-        
+
     Dimensions & Contiguity Rationale:
     1. Layer dimension (0): indexing by layer index yields contiguous multi-block memory per layer.
     2. Block dimension (1): physical block IDs [0..num_blocks-1] index directly into dimension 1.
     3. Token offset (2), KV heads (3), Head Dim (4): contiguous layout per block allows vectorized
        token scatter/gather, batch slicing, and direct head operations without per-element copies.
-       
+
     Memory Allocation:
     Storage is allocated ONCE at initialization on the specified target device and dtype.
     Avoids dynamic tensor allocation during decode steps.
@@ -92,7 +91,7 @@ class TensorBlockStore:
         """Total allocated physical memory footprint in bytes across K & V stores."""
         return self.bytes_per_block * self._num_blocks
 
-    def _validate_indices(self, layer_idx: int, physical_block_id: int, block_offset: Optional[int] = None) -> None:
+    def _validate_indices(self, layer_idx: int, physical_block_id: int, block_offset: int | None = None) -> None:
         if layer_idx < 0 or layer_idx >= self._geometry.num_layers:
             raise PhysicalBlockStoreError(
                 f"Layer index {layer_idx} out of bounds [0, {self._geometry.num_layers - 1}]"
@@ -116,7 +115,7 @@ class TensorBlockStore:
         value: torch.Tensor,
     ) -> None:
         """Write single-token Key and Value vectors into a physical block location.
-        
+
         Args:
             layer_idx: Target transformer layer [0..num_layers-1].
             physical_block_id: Target physical block ID [0..num_blocks-1].
@@ -150,10 +149,10 @@ class TensorBlockStore:
         physical_block_id: int,
         key_block: torch.Tensor,
         value_block: torch.Tensor,
-        num_tokens: Optional[int] = None,
+        num_tokens: int | None = None,
     ) -> None:
         """Write a full or partial block of Key and Value tensors.
-        
+
         Args:
             layer_idx: Target layer index.
             physical_block_id: Target physical block ID.
@@ -192,7 +191,7 @@ class TensorBlockStore:
         return k, v
 
     def read_block(
-        self, layer_idx: int, physical_block_id: int, num_tokens: Optional[int] = None
+        self, layer_idx: int, physical_block_id: int, num_tokens: int | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Read a full or partial block of Key and Value tensors."""
         self._validate_indices(layer_idx, physical_block_id)

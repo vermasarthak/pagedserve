@@ -20,7 +20,7 @@ class SchedulingPolicy(ABC):
 
 class FCFSPolicy(SchedulingPolicy):
     """First-Come, First-Served (FCFS) Scheduling Policy.
-    
+
     Requests are admitted strictly in order of their arrival timestamp.
     This guarantees fairness, absence of starvation under moderate load,
     and highly deterministic testing behavior.
@@ -42,12 +42,12 @@ class KVPressureLevel:
 
 class MemoryAwarePolicy(SchedulingPolicy):
     """Experimental memory-pressure-adaptive scheduling policy.
-    
+
     Adapts admission and prefill chunk size based on KV block utilization:
     - LOW (< low_threshold): Normal FCFS behavior.
     - MEDIUM (low_threshold to high_threshold): Reduce new admissions and chunk sizes.
     - HIGH (> high_threshold): Strongly restrict admissions; prioritize near-complete sequences.
-    
+
     Starvation prevention: requests gain priority weight after waiting many iterations.
     This policy is EXPERIMENTAL. FCFS remains the default and is always available.
     """

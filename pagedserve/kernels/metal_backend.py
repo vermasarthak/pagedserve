@@ -76,7 +76,7 @@ class MTLSize(ctypes.Structure):
 
 class MetalPagedAttentionBackend(PagedAttentionBackend):
     """Fused Apple Metal execution backend for single-token decode paged attention.
-    
+
     Reads physical KV blocks directly from TensorBlockStore via logical block tables.
     Iterates through non-contiguous pages directly in Metal Shading Language (MSL)
     with online numerically stable softmax.
@@ -145,7 +145,7 @@ class MetalPagedAttentionBackend(PagedAttentionBackend):
         scale: float | None = None,
     ) -> torch.Tensor:
         """Execute single-token decode paged attention on GPU using custom Metal kernel.
-        
+
         Falls back to PyTorchPagedAttentionBackend if shape or environment is unsupported.
         """
         # Guard: Metal backend targets single-token decode (query_seq_len == 1)

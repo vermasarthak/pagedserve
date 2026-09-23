@@ -14,19 +14,19 @@ def paged_attention_reference(
     scale: float | None = None,
 ) -> torch.Tensor:
     """Correctness reference implementation for paged attention.
-    
+
     IMPORTANT TECHNICAL NOTICE:
     This is a correctness reference implementation. It is NOT an optimized PagedAttention
     kernel because it gathers paged K/V into contiguous tensors before attention computation.
     It does NOT claim zero-copy paged attention.
-    
+
     Args:
         query: Single-token or multi-token Query tensor for one sequence.
                Shape: [batch=1, num_attention_heads, query_seq_len, head_dim]
         paged_view: Request-level PagedKVView pointing to physical block storage.
         layer_idx: Target hidden layer index.
         scale: Optional softmax scaling factor. Defaults to 1.0 / sqrt(head_dim).
-        
+
     Returns:
         Attention output tensor of shape [batch=1, num_attention_heads, query_seq_len, head_dim].
     """
@@ -81,21 +81,21 @@ def paged_attention_blockwise(
     scale: float | None = None,
 ) -> torch.Tensor:
     """Direct blockwise paged attention using incremental online softmax.
-    
+
     Reads physical KV blocks directly from TensorBlockStore without gathering
     the entire sequence into a contiguous K/V tensor.
-    
+
     Memory Complexity:
         O(block_size * num_heads * head_dim) temporary working memory per block,
         compared to O(seq_length * num_heads * head_dim) for full-sequence gather.
-        
+
     Args:
         query: Query tensor for one sequence.
                Shape: [batch=1, num_attention_heads, query_seq_len, head_dim]
         paged_view: Request-level PagedKVView pointing to physical block storage.
         layer_idx: Target hidden layer index.
         scale: Optional softmax scaling factor. Defaults to 1.0 / sqrt(head_dim).
-        
+
     Returns:
         Attention output tensor of shape [batch=1, num_attention_heads, query_seq_len, head_dim].
     """

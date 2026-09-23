@@ -12,14 +12,14 @@ from pagedserve.model.loader import LoadedModel
 @dataclass
 class ModelSequenceState:
     """Per-sequence model execution state holding PyTorch transformer activations.
-    
+
     Architectural Note:
     PagedServe maintains a clean separation between:
     1. The Systems Metadata KV Subsystem (KVBlock, BlockPool, BlockTable, PrefixCache),
        which virtualizes memory, tracks reference counts, and drives scheduling.
     2. The Framework KV State (past_key_values), which holds the actual PyTorch activation
        tensors managed by Hugging Face Transformers for auto-regressive decode reuse.
-    
+
     At this milestone, Hugging Face's native past_key_values is used for tensor caching,
     while PagedServe's block-based memory manager governs admission, sequence capacity,
     and lifecycle reclamation.
@@ -49,12 +49,12 @@ class ModelRunner:
         existing_state: ModelSequenceState | None = None,
     ) -> tuple[torch.Tensor, ModelSequenceState]:
         """Execute a prefill forward pass on a full prompt or a prompt chunk.
-        
+
         Args:
             request_id: Identifier of the request.
             token_ids: Slice of token IDs to process in this prefill step.
             existing_state: Prior ModelSequenceState if this is an incremental chunk of a long prompt.
-            
+
         Returns:
             Tuple of (last_token_logits, updated_model_sequence_state).
         """
@@ -93,15 +93,15 @@ class ModelRunner:
         state: ModelSequenceState,
     ) -> tuple[torch.Tensor, ModelSequenceState]:
         """Execute a single-token auto-regressive decode step reusing past KV activations.
-        
+
         Mandatory: Feeds ONLY the single new token into the transformer, relying on
         past_key_values rather than recomputing the full sequence.
-        
+
         Args:
             request_id: Identifier of the request.
             next_token_id: The single newly generated token ID from the previous step.
             state: The current ModelSequenceState containing prior past_key_values.
-            
+
         Returns:
             Tuple of (next_token_logits, updated_model_sequence_state).
         """

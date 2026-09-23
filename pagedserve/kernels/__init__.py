@@ -10,11 +10,11 @@ from pagedserve.kernels.pytorch_backend import PyTorchPagedAttentionBackend
 
 def get_backend(name: str = "auto") -> PagedAttentionBackend:
     """Backend factory function returning the requested PagedAttention backend.
-    
+
     Args:
         name: 'auto', 'pytorch', or 'metal'.
               'auto': returns MetalPagedAttentionBackend if available, else PyTorchPagedAttentionBackend.
-              
+
     Returns:
         Instance of PagedAttentionBackend.
     """

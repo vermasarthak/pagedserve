@@ -52,7 +52,7 @@ def benchmark_physical_store_ops(device_str: str = "cpu", trials: int = 100):
         _ = scatter_gather.gather_sequence_layer(0, table, seq_len)
 
     synchronize_device(device)
-    
+
     # Measure Scatter
     t0 = time.monotonic()
     for _ in range(trials):
@@ -79,7 +79,7 @@ def benchmark_physical_store_ops(device_str: str = "cpu", trials: int = 100):
     # Measure Reference Paged Attention
     paged_view = PagedKVView(table, seq_len, store)
     query = torch.randn((1, geometry.num_attention_heads, 1, geometry.head_dim), dtype=dtype, device=device)
-    
+
     # Warmup attention
     _ = paged_attention_reference(query, paged_view, layer_idx=0)
     synchronize_device(device)

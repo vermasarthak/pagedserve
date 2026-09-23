@@ -1,7 +1,6 @@
 """Memory overhead estimation utilities for full-sequence gather vs direct blockwise paged attention."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -38,17 +37,20 @@ def estimate_attention_memory(
     dtype_bytes: int = 4,  # float32 = 4 bytes, float16 = 2 bytes
 ) -> MemoryEstimate:
     """Estimate peak temporary working memory for full-sequence gather vs direct blockwise attention.
-    
+
     Args:
         sequence_length: Total active sequence length S.
         num_heads: Number of attention heads H.
         head_dim: Dimension per head D.
         block_size: Tokens per physical block B.
         dtype_bytes: Bytes per element (e.g. 4 for float32).
-        
+
     Returns:
         MemoryEstimate dataclass containing byte allocations and reduction factor.
     """
+    if sequence_length <= 0 or num_heads <= 0 or head_dim <= 0 or block_size <= 0 or dtype_bytes <= 0:
+        raise ValueError("All memory estimation parameters must be positive integers")
+
     # Full gather allocates contiguous K and V tensors: 2 * (S * H * D * dtype_bytes)
     gather_bytes = 2 * sequence_length * num_heads * head_dim * dtype_bytes
 
@@ -68,7 +70,7 @@ def estimate_attention_memory(
 
 
 def compare_sequence_scaling(
-    sequence_lengths: Optional[list[int]] = None,
+    sequence_lengths: list[int] | None = None,
     num_heads: int = 12,
     head_dim: int = 64,
     block_size: int = 16,

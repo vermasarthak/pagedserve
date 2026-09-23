@@ -15,7 +15,7 @@ class UnsupportedArchitectureError(PagedServeError):
 @dataclass(frozen=True)
 class KVCacheGeometry:
     """Encapsulates physical Key-Value cache tensor geometry for a transformer model.
-    
+
     Attributes:
         num_layers: Total number of transformer hidden layers.
         num_kv_heads: Number of Key-Value attention heads per layer (supports MHA, GQA, MQA).
@@ -37,7 +37,7 @@ class KVCacheGeometry:
     @property
     def bytes_per_token_kv(self) -> int:
         """Total memory in bytes required to store Key and Value for 1 token across all layers.
-        
+
         Formula: 2 (K & V) * num_layers * num_kv_heads * head_dim * element_size
         """
         element_size = torch.tensor([], dtype=self.dtype).element_size()
@@ -55,7 +55,7 @@ class KVCacheGeometry:
         block_size: int = 16,
     ) -> "KVCacheGeometry":
         """Extract KV cache geometry from a LoadedModel instance.
-        
+
         Currently supports:
         - GPT-2 family (`GPT2LMHeadModel`, `GPT2Model`, etc.)
         - Llama / Mistral / Qwen / generic CausalLM with standard HF configs (`n_layer`/`num_hidden_layers`, etc.)

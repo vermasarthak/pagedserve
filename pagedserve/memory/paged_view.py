@@ -11,7 +11,7 @@ from pagedserve.model.cache_adapter import CacheAdapter
 
 class PagedKVView:
     """Request-level view object exposing access to non-contiguous physical KV blocks.
-    
+
     Architectural & Implementation Limitation:
     This milestone gathers non-contiguous physical K/V blocks into temporary contiguous
     tensors on-demand during view operations. It does NOT yet perform zero-copy paged attention.
@@ -35,7 +35,7 @@ class PagedKVView:
 
     def gather_keys(self, layer_idx: int) -> torch.Tensor:
         """Gather canonical Key sequence for a given layer.
-        
+
         Returns:
             Key tensor of shape (seq_length, num_kv_heads, head_dim).
         """
@@ -46,7 +46,7 @@ class PagedKVView:
 
     def gather_values(self, layer_idx: int) -> torch.Tensor:
         """Gather canonical Value sequence for a given layer.
-        
+
         Returns:
             Value tensor of shape (seq_length, num_kv_heads, head_dim).
         """

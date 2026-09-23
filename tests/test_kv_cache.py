@@ -207,12 +207,12 @@ def test_kv_cache_blocks_by_request_tracking():
 
 def test_kv_cache_shared_blocks_across_requests():
     """Verify shared physical block retention and reference counting across requests.
-    
+
     When Request A and Request B share a physical block (e.g. prefix sharing),
     releasing Request A must NOT return the block to the pool until Request B also finishes.
     """
     mgr = KVCacheManager(num_blocks=4, block_size=16)
-    
+
     # Request A allocates 1 block (block 0)
     tA = mgr.allocate_for_prompt("req-A", prompt_len=16)
     shared_block_id = tA.physical_block_for(0)
@@ -226,13 +226,13 @@ def test_kv_cache_shared_blocks_across_requests():
     mgr._tables["req-B"] = table_B
     assert mgr.used_blocks == 1  # 1 unique block used, but ref_count is 2
     assert mgr._pool.get_block(shared_block_id).ref_count == 2
-    
+
     # Release Request A
     mgr.release_request("req-A")
     # Shared block 0 is still retained by Request B!
     assert mgr._pool.get_block(shared_block_id).ref_count == 1
     assert mgr._pool.get_block(shared_block_id).is_allocated
-    
+
     # Release Request B
     mgr.release_request("req-B")
     # Now all blocks are freed
@@ -242,7 +242,7 @@ def test_kv_cache_shared_blocks_across_requests():
 def test_kv_cache_failure_and_cancellation_cleanup():
     """Verify that simulated request failures and cancellations leave zero orphaned blocks."""
     mgr = KVCacheManager(num_blocks=8, block_size=8)
-    
+
     # 3 requests in flight
     mgr.allocate_for_prompt("req-fail", prompt_len=16)    # 2 blocks
     mgr.allocate_for_prompt("req-cancel", prompt_len=24)  # 3 blocks

@@ -8,7 +8,7 @@ from pagedserve.errors import BlockInvariantError, DoubleFreeError
 @dataclass
 class KVBlock:
     """Represents the metadata for a single fixed-size physical KV cache block.
-    
+
     A physical block holds KV cache activations for up to `capacity` tokens.
     Logical sequences map their tokens into one or more physical blocks.
     Blocks can be shared across multiple requests (e.g. for prefix caching),
@@ -94,7 +94,7 @@ class KVBlock:
 
     def release(self) -> int:
         """Decrement the reference count.
-        
+
         When reference count reaches 0, the block is reset to unallocated and its
         token count is cleared so it can safely return to the free pool.
         """

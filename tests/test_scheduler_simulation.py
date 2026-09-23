@@ -11,12 +11,12 @@ from pagedserve.scheduler.scheduler import Scheduler
 
 def test_heterogeneous_scheduler_simulation():
     """Simulate engine scheduling across requests with widely varying prompt and output lengths:
-    
+
     A: prompt 50,   output 5
     B: prompt 2000, output 3  (Long prompt, multi-chunk prefill)
     C: prompt 20,   output 8  (Short prompt, long decode)
     D: prompt 500,  output 2  (Medium prompt)
-    
+
     Demonstrates:
     - Long prefill is chunked without monopolizing iterations.
     - Shorter decoding requests (A, C) interleave and make progress while B is still prefilling.

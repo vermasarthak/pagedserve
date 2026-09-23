@@ -55,7 +55,7 @@ def main():
         sampling.stop_token_ids.add(eos_id)
 
     print("[latency_bench] Warming up...")
-    warm_id = engine.submit(prompts[0], sampling_params=sampling)
+    engine.submit(prompts[0], sampling_params=sampling)
     while engine.has_active_work:
         engine.step()
 

@@ -18,7 +18,7 @@ class Sampler:
         generator: torch.Generator | None = None,
     ) -> int:
         """Sample the next token ID from a 1D or (1, V) logits tensor.
-        
+
         Sampling Pipeline:
             Raw Logits
                 |
@@ -33,12 +33,12 @@ class Sampler:
             Softmax (convert to categorical distribution)
                 |
             Multinomial Sampling -> next_token_id
-            
+
         Args:
             logits: Output logits tensor from the model runner.
             sampling_params: Generation hyperparameters.
             generator: Optional torch.Generator for deterministic reproducibility.
-            
+
         Returns:
             Sampled token ID as an integer in [0, vocab_size - 1].
         """
@@ -51,8 +51,8 @@ class Sampler:
         # Clone to prevent in-place mutation of runner tensors
         filtered_logits = logits.clone().float()
 
-        # 1. Greedy argmax decoding
-        if sampling_params.temperature == 0.0:
+        # 1. Greedy argmax decoding (temperature <= 0)
+        if sampling_params.temperature <= 0.0:
             return int(torch.argmax(filtered_logits).item())
 
         # 2. Temperature scaling

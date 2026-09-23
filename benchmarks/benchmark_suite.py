@@ -94,7 +94,7 @@ def run_benchmark_matrix(
                     engine = PagedServeEngine(config=config, loaded_model=loaded)
                     sampling = SamplingParams(max_new_tokens=o_toks, temperature=0.0)
                     req_ids = [engine.submit(p, sampling_params=sampling, request_id=f"r_{i}") for i, p in enumerate(prompts)]
-                    
+
                     synchronize_device(loaded.device)
                     t0 = time.monotonic()
                     while engine.has_active_work:

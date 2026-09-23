@@ -13,7 +13,7 @@ import torch
 
 def synchronize_device(device: torch.device | str) -> None:
     """Synchronize accelerator execution queue before/after timing sections.
-    
+
     - CUDA: torch.cuda.synchronize()
     - MPS: torch.mps.synchronize() (if available in PyTorch build)
     - CPU: no-op

@@ -20,7 +20,7 @@ class CacheAdapterError(PagedServeError):
 
 class CacheAdapter:
     """Translates Hugging Face cache objects (DynamicCache, tuple of tuples) to and from canonical PagedServe tensors.
-    
+
     Canonical Internal PagedServe Representation per Layer:
         key:   [seq_length, num_kv_heads, head_dim]  (unbatched single-sequence)
         value: [seq_length, num_kv_heads, head_dim]  (unbatched single-sequence)
@@ -31,15 +31,15 @@ class CacheAdapter:
         past_key_values: Any, layer_idx: int
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Extract canonical single-sequence Key and Value tensors for a specified layer from HF cache.
-        
+
         Supports:
         - `DynamicCache` (standard in modern Transformers)
         - Legacy tuple of `(key, value)` tuples
-        
+
         Args:
             past_key_values: Hugging Face cache structure.
             layer_idx: Layer index to extract.
-            
+
         Returns:
             Tuple of (key_tensor, value_tensor) each of shape [seq_length, num_kv_heads, head_dim].
         """
@@ -89,12 +89,12 @@ class CacheAdapter:
         geometry: KVCacheGeometry,
     ) -> DynamicCache:
         """Convert a list of canonical layer (key, value) tensors back into a Hugging Face DynamicCache.
-        
+
         Args:
             layer_kv_pairs: List of (key, value) tuples per layer, where key/value are
                             shape [seq_length, num_kv_heads, head_dim].
             geometry: Target KV cache geometry.
-            
+
         Returns:
             Populated Hugging Face DynamicCache instance compatible with model forward calls.
         """

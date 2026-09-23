@@ -13,7 +13,7 @@ from pagedserve.memory.block import KVBlock
 
 class BlockPool:
     """Manages a pre-allocated pool of fixed-size physical KV cache blocks.
-    
+
     The pool maintains an array of all blocks and a free-list deque for O(1) allocation
     and deallocation. It enforces strict reference counting invariants and prevents
     double frees, invalid block references, and silent memory leaks.
@@ -76,7 +76,7 @@ class BlockPool:
 
     def allocate(self) -> KVBlock:
         """Allocate a single physical block from the free list.
-        
+
         Raises:
             KVCacheExhaustedError: if no free blocks are available.
         """
@@ -94,9 +94,9 @@ class BlockPool:
 
     def allocate_many(self, count: int) -> list[KVBlock]:
         """Atomically allocate multiple physical blocks.
-        
+
         Guarantees that either all `count` blocks are allocated, or none are.
-        
+
         Raises:
             ValueError: if count < 0.
             KVCacheExhaustedError: if available free blocks < count.
@@ -134,9 +134,9 @@ class BlockPool:
 
     def release(self, block_id: int) -> int:
         """Release one reference to a block.
-        
+
         If the reference count reaches 0, the block is reset and returned to the free list.
-        
+
         Raises:
             InvalidBlockError: if block_id is invalid.
             DoubleFreeError: if the block is already free.

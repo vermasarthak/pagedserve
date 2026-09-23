@@ -90,12 +90,12 @@ class ModelLoader:
         dtype: str | None = None,
     ) -> LoadedModel:
         """Load tokenizer and causal LM weights from Hugging Face or local path.
-        
+
         Args:
             model_name_or_path: HF model identifier or local directory.
             device: Explicit device string ("cpu", "mps", "cuda"). Defaults to auto-detect.
             dtype: Precision string ("float32", "float16", "bfloat16"). Defaults to device-safe.
-            
+
         Returns:
             LoadedModel container with model, tokenizer, and metadata.
         """

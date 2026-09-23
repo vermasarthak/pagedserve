@@ -11,7 +11,7 @@ from pagedserve.scheduler.policy import FCFSPolicy, SchedulingPolicy
 
 class Scheduler:
     """Iteration-level Continuous Batching Scheduler.
-    
+
     Key Responsibilities:
     1. Continuous Batching: Retires finished sequences and admits new waiting sequences
        at every single iteration step without waiting for an entire batch to complete.
@@ -95,7 +95,7 @@ class Scheduler:
 
     def add_request(self, request: InferenceRequest) -> None:
         """Enqueue a new inference request into the waiting queue.
-        
+
         Raises:
             InvalidRequestStateError: if request is not in WAITING state.
             InvalidRequestError: if request ID already exists in scheduler.
@@ -153,7 +153,7 @@ class Scheduler:
 
     def schedule(self) -> SchedulerBatch:
         """Construct the next iteration's batch of work.
-        
+
         Pipeline:
         1. Drain completed / cancelled / failed requests from running set and release memory.
         2. Schedule active decode requests (prioritized to prevent decode starvation).

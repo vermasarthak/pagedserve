@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pagedserve.errors import InvalidRequestError
 from pagedserve.memory.block_pool import BlockPool
 from pagedserve.memory.block_table import BlockTable
+from pagedserve.memory.fp8_cache import FP8KVCacheEngine
 from pagedserve.memory.prefix_cache import PrefixCache, compute_prefix_block_hash
 
 
@@ -23,11 +24,12 @@ class CacheStats:
     prefix_cache_hits: int = 0
     prefix_cache_misses: int = 0
     prefix_cache_hit_rate: float = 0.0
+    fp8_enabled: bool = False
 
 
 class KVCacheManager:
     """Manages the lifecycle of KV cache memory across all active inference requests.
-    
+
     Coordinates the physical BlockPool, per-request BlockTables, and PrefixCache:
     - Allocates initial physical blocks needed for prompt prefill.
     - Deduplicates identical prompt prefixes across requests via PrefixCache.
@@ -42,6 +44,8 @@ class KVCacheManager:
         block_size: int,
         enable_prefix_caching: bool = False,
         max_prefix_cached_blocks: int = 128,
+        enable_fp8: bool = False,
+        fp8_format: str = "e4m3",
     ):
         self._block_size: int = block_size
         self._pool: BlockPool = BlockPool(num_blocks=num_blocks, block_size=block_size)
@@ -52,6 +56,15 @@ class KVCacheManager:
             if enable_prefix_caching
             else None
         )
+        self._enable_fp8: bool = enable_fp8
+        self._fp8_engine: FP8KVCacheEngine | None = (
+            FP8KVCacheEngine(fp8_format=fp8_format) if enable_fp8 else None
+        )
+
+    @property
+    def fp8_engine(self) -> FP8KVCacheEngine | None:
+        """The attached FP8KVCacheEngine instance, if enabled."""
+        return self._fp8_engine
 
     @property
     def prefix_cache(self) -> PrefixCache | None:
@@ -157,14 +170,14 @@ class KVCacheManager:
 
     def allocate_for_prompt(self, request_id: str, prompt_len: int) -> BlockTable:
         """Allocate initial physical blocks for a new prompt sequence.
-        
+
         Args:
             request_id: Unique identifier for the inference request.
             prompt_len: Length of the prompt in tokens (must be >= 1).
-            
+
         Returns:
             The initialized BlockTable populated with physical block IDs.
-            
+
         Raises:
             InvalidRequestError: if prompt_len <= 0 or request_id is already active.
             KVCacheExhaustedError: if insufficient free blocks in pool.
@@ -195,11 +208,11 @@ class KVCacheManager:
         self, request_id: str, prompt_token_ids: Sequence[int]
     ) -> BlockTable:
         """Allocate physical blocks for a prompt, deduplicating full prefix blocks via PrefixCache if enabled.
-        
+
         Args:
             request_id: Unique identifier for the inference request.
             prompt_token_ids: Sequence of token IDs in the prompt.
-            
+
         Returns:
             The initialized BlockTable populated with physical block IDs.
         """
@@ -261,17 +274,17 @@ class KVCacheManager:
 
     def append_token(self, request_id: str, current_total_len: int) -> int | None:
         """Record the generation of a new token for an existing sequence.
-        
+
         If sequence length exceeds currently mapped block capacity, allocates
         a new physical block and appends it to the request's BlockTable.
-        
+
         Args:
             request_id: Identifier of the request.
             current_total_len: Total length of the sequence including the new token.
-            
+
         Returns:
             The newly allocated physical block ID if a block boundary was crossed, else None.
-            
+
         Raises:
             KeyError: if request_id is not found.
             KVCacheExhaustedError: if a new block is required but the pool is exhausted.
@@ -300,7 +313,7 @@ class KVCacheManager:
 
     def release_request(self, request_id: str) -> None:
         """Release all physical blocks allocated to the given request.
-        
+
         Idempotent: if request_id is not in active tables, this call safely does nothing.
         """
         table = self._tables.pop(request_id, None)

@@ -6,13 +6,13 @@ from pagedserve.errors import InvalidBlockError
 
 class BlockTable:
     """Maintains the logical-to-physical block mapping for a single inference request.
-    
+
     Why Logical/Physical Indirection Matters:
     Traditional inference systems pre-allocate a contiguous maximum-length KV buffer
     for every request (e.g. 2048 or 4096 tokens). Because actual generation lengths vary
     widely and cannot be known in advance, this causes severe external and internal
     fragmentation (60-80% wasted KV cache memory).
-    
+
     By decoupling the logical sequence of tokens from physical memory, PagedServe
     allows physical blocks to be scattered non-contiguously throughout GPU/CPU memory.
     Blocks are allocated strictly on demand as the sequence expands, eliminating external
@@ -23,6 +23,7 @@ class BlockTable:
     def __init__(self, request_id: str):
         self._request_id: str = request_id
         self._physical_blocks: list[int] = []
+        self._block_set: set[int] = set()
 
     @property
     def request_id(self) -> str:
@@ -49,10 +50,11 @@ class BlockTable:
         if physical_block_id < 0:
             raise InvalidBlockError(f"Cannot append negative block ID: {physical_block_id}")
         self._physical_blocks.append(physical_block_id)
+        self._block_set.add(physical_block_id)
 
     def physical_block_for(self, logical_index: int) -> int:
         """Translate a logical block index (0, 1, ...) to its corresponding physical block ID.
-        
+
         Raises:
             IndexError: if logical_index is out of range.
         """
@@ -67,11 +69,11 @@ class BlockTable:
         self, token_index: int, block_size: int
     ) -> tuple[int, int]:
         """Given a zero-indexed token position in the sequence, return (physical_block_id, offset_in_block).
-        
+
         Args:
             token_index: 0-indexed position of the token in the sequence.
             block_size: number of tokens stored per physical block.
-            
+
         Returns:
             Tuple of (physical_block_id, offset_in_block).
         """
@@ -88,15 +90,16 @@ class BlockTable:
 
     def contains_block(self, physical_block_id: int) -> bool:
         """Check if this block table currently maps the specified physical block ID."""
-        return physical_block_id in self._physical_blocks
+        return physical_block_id in self._block_set
 
     def clear(self) -> list[int]:
         """Clear all block mappings and return the physical block IDs that were mapped.
-        
+
         The returned block IDs must subsequently be released in the BlockPool by the caller.
         """
         released = list(self._physical_blocks)
         self._physical_blocks.clear()
+        self._block_set.clear()
         return released
 
     def __len__(self) -> int:

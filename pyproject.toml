@@ -31,6 +31,20 @@ dev = [
     "pyright>=1.1.350",
 ]
 
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501",   # Line length formatting
+    "E702",   # Multiple statements on one line (used in compact test vector setups)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F841", "RUF059", "B017"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

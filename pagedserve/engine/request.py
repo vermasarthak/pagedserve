@@ -63,6 +63,8 @@ class InferenceRequest:
             raise InvalidRequestError("prompt_token_ids must be a list of integers")
         if len(self.prompt_token_ids) == 0:
             raise InvalidRequestError("prompt_token_ids cannot be empty")
+        if any(not isinstance(t, int) or t < 0 for t in self.prompt_token_ids):
+            raise InvalidRequestError("prompt_token_ids must contain non-negative integers")
 
     # --- Computed Properties ---
 

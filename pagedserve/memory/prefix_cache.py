@@ -9,18 +9,18 @@ from pagedserve.memory.block_pool import BlockPool
 
 def compute_prefix_block_hash(token_ids: Sequence[int], prev_hash: str = "") -> str:
     """Compute a deterministic, content-addressed cryptographic hash for a block of tokens.
-    
+
     Chained Hashing:
     The hash is computed over the previous block's hash concatenated with the current
     block's sequence of token IDs. This guarantees that block identity is strictly
     dependent on the entire prefix history leading up to this point, preventing false
     collisions between identical token subsequences appearing at different positions
     or under different prompt contexts.
-    
+
     Args:
         token_ids: Sequence of token IDs in the current block.
         prev_hash: The cryptographic hash of the immediately preceding block (or "" for block 0).
-        
+
     Returns:
         Hex-encoded SHA-256 digest string.
     """
@@ -35,7 +35,7 @@ def compute_prefix_block_hash(token_ids: Sequence[int], prev_hash: str = "") -> 
 
 class PrefixCache:
     """Maintains a bounded, content-addressed cache of reusable full KV blocks.
-    
+
     Ownership Semantics:
     1. Active Request: Holds 1 reference to each physical block in its BlockTable.
     2. PrefixCache Entry: When a block is registered in the cache, the PrefixCache
@@ -92,7 +92,7 @@ class PrefixCache:
 
     def lookup(self, prefix_hash: str) -> int | None:
         """Look up a cached physical block by its chained prefix hash.
-        
+
         If found: marks entry as most-recently-used, increments hits, returns physical_block_id.
         If missing: increments misses, returns None.
         """
@@ -106,10 +106,10 @@ class PrefixCache:
 
     def insert(self, prefix_hash: str, physical_block_id: int) -> None:
         """Insert a full physical block into the cache under its prefix hash.
-        
+
         The PrefixCache increments the block's reference count in the pool to guarantee
         that the physical block will not be reclaimed while cached.
-        
+
         If the cache exceeds max_cached_blocks, the least recently used entry is evicted.
         """
         if prefix_hash in self._cache:

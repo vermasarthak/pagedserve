@@ -9,7 +9,7 @@ from pagedserve.model.sampler import Sampler
 
 class SequentialBaseline:
     """A conventional baseline inference implementation for fair comparison.
-    
+
     Processes one request at a time using a standard autoregressive loop
     with Hugging Face DynamicCache. It intentionally does not use
     continuous batching or custom KV memory management.
@@ -27,12 +27,12 @@ class SequentialBaseline:
         seed: int | None = None,
     ) -> list[int]:
         """Generate output tokens for a single prompt sequentially.
-        
+
         Args:
             prompt_tokens: Input token IDs.
             sampling_params: Generation hyperparameters.
             seed: Optional random seed for deterministic generation.
-            
+
         Returns:
             List of generated output token IDs (excluding prompt).
         """

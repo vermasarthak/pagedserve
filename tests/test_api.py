@@ -72,7 +72,7 @@ def test_completions_streaming_endpoint(api_client):
     assert response.status_code == 200
     assert "text/event-stream" in response.headers["content-type"]
     lines = response.text.split("\n")
-    data_lines = [l for l in lines if l.startswith("data: ")]
+    data_lines = [line for line in lines if line.startswith("data: ")]
     assert len(data_lines) > 0
 
 

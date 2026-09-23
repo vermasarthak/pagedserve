@@ -26,7 +26,7 @@ class CacheScatterGather:
         value_seq: torch.Tensor,
     ) -> None:
         """Scatter a logical sequence of Key and Value tensors for one layer into physical blocks.
-        
+
         Args:
             layer_idx: Target hidden layer index.
             block_table: Request's BlockTable specifying logical-to-physical block mapping.
@@ -86,12 +86,12 @@ class CacheScatterGather:
         seq_length: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Gather non-contiguous physical blocks into a single contiguous logical sequence for one layer.
-        
+
         Args:
             layer_idx: Target hidden layer index.
             block_table: Request's BlockTable specifying physical block mapping.
             seq_length: Exact token count of the active sequence.
-            
+
         Returns:
             Tuple of (gathered_key_seq, gathered_value_seq) each of shape (seq_length, num_kv_heads, head_dim).
         """

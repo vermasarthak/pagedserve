@@ -119,7 +119,7 @@ class PagedServeEngine:
         request_id: str | None = None,
     ) -> str:
         """Tokenize a prompt and enqueue an inference request for continuous scheduling."""
-        if not prompt:
+        if not prompt or not prompt.strip():
             raise InvalidRequestError("Prompt cannot be empty")
 
         req_id = request_id if request_id is not None else str(uuid.uuid4())

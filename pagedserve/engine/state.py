@@ -5,7 +5,7 @@ from enum import Enum
 
 class RequestState(str, Enum):
     """Lifecycle states of an inference request in PagedServe.
-    
+
     State transition graph:
         WAITING --> PREFILL --> DECODING --> FINISHED
            |           |           |
