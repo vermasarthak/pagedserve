@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/vermasarthak/pagedserve/actions/workflows/ci.yml/badge.svg)](https://github.com/vermasarthak/pagedserve/actions/workflows/ci.yml)
 
-PagedServe is an experimental LLM inference runtime built from scratch to explore paged KV memory, continuous batching, direct blockwise attention, and custom GPU kernels.
+PagedServe is an experimental LLM-serving systems reference with paged KV allocation, continuous-batching simulation and attention-kernel experiments.
 
 ## Why I Built This
 

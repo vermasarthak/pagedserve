@@ -1,7 +1,7 @@
-"""Multi-GPU Tensor Parallelism (TP) & AllReduce Primitives for PagedServe.
+"""Tensor Partitioning Simulation for PagedServe.
 
-Splits multi-head attention queries, keys, and values across physical device ranks (TP=2, 4, 8),
-with ring-AllReduce synchronization.
+Simulates splitting multi-head attention queries, keys, and values across logical ranks
+and provides rank-partition slicing utilities.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import torch
 
 @dataclass
 class TensorParallelConfig:
-    """Configuration for Tensor Parallelism execution."""
+    """Configuration for simulated Tensor Parallelism partitioning."""
     world_size: int = 1
     rank: int = 0
 
@@ -25,7 +25,7 @@ class TensorParallelConfig:
 
 
 class TensorParallelGroup:
-    """Manages head distribution and ring-AllReduce communication across ranks."""
+    """Manages head distribution and logical partitioning across ranks."""
 
     def __init__(self, config: TensorParallelConfig):
         self.config = config
@@ -41,10 +41,9 @@ class TensorParallelGroup:
         return local_num_heads, head_start, head_end
 
     def all_reduce(self, tensor: torch.Tensor) -> torch.Tensor:
-        """Performs AllReduce (sum) across all ranks in the TP group."""
+        """Simulates AllReduce reduction step across logical partitions (in-process tensor identity)."""
         if self.config.world_size == 1:
             return tensor
 
-        # Simulate GPU ring-AllReduce across ranks
-        reduced = tensor.clone()
-        return reduced
+        # In-process single-device simulation
+        return tensor.clone()

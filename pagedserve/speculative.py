@@ -1,6 +1,6 @@
-"""Speculative Decoding Engine for PagedServe.
+"""Speculative Decoding Verification Routine for PagedServe.
 
-Implements Target-Draft speculative token verification with tree & chain rejection sampling.
+Provides standalone Target-Draft verification logic with greedy and temperature-based rejection sampling.
 """
 
 from __future__ import annotations
